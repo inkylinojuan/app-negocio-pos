@@ -333,9 +333,9 @@ export default {
 
 <style scoped>
 /* Tus estilos aquí */
-.turn-manager {
-  /* Estilos específicos para el turno */
-}
+/* .turn-manager {
+  Estilos específicos para el turno 
+}*/
 .form-group {
   margin-bottom: 1rem;
 }

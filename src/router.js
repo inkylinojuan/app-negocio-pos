@@ -39,7 +39,7 @@ import Manillas from './manillas/Manilla.vue'
 
 // Importar páginas Inventario
 import FirestoreView from './inventario/FirestoreView.vue'
-import SingleRFID from './inventario/SingleRFID.vue'
+import SingleRFID from './inventario/SingleRFID.vue' // No esta en uso
 import AllRFID from './inventario/AllRFID.vue' 
 import Bodegas from './inventario/ManageBodegas.vue'
 import ManageActivos from './inventario/ManageActivos.vue'
@@ -251,6 +251,19 @@ const routes = [
     component: () => import('./inventario/fijos/FijosCrearActivoView.vue'),
     meta: { requiresAuth: true, role: 'Inventario' }
   },
+
+  //-----agregado por david 
+
+  {
+  path: '/fijos/listado',
+  name: 'ListadoFijos',
+  component: () => import('./inventario/fijos/FijosCrearActivoView.vue'),
+  meta: { requiresAuth: true, role: 'Inventario' }
+},
+ //
+
+ 
+
   {
     path: '/prestamo/categorias',
     name: 'PrestamoCategorias',

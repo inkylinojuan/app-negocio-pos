@@ -4,7 +4,7 @@
   
       <!-- Si no hay libro diario abierto, mostrar formulario para abrirlo -->
       <div v-if="!openLedger">
-        <h3>Abrir Libro Diario</h3>
+        <!-- <h3>Abrir Libro Diario</h3> -->
         <form @submit.prevent="openLedgerFunction" class="row g-3">
           <div class="col-md-6">
             <label for="openingDate" class="form-label">Fecha de Apertura</label>

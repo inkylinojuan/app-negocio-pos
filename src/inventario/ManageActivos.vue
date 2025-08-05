@@ -22,6 +22,8 @@
           </a>
         </li>
       </ul>
+
+
       
       <!-- Pestaña Activos: Tabla, búsqueda y CRUD -->
       <div v-if="activeTab === 'activos'">
@@ -30,6 +32,8 @@
           <input v-model="searchQuery" type="text" class="form-control" placeholder="Buscar activo..."/>
         </div>
     
+
+
         <!-- Tabla de activos -->
         <table class="table table-striped table-hover">
           <thead class="table-light">
@@ -53,6 +57,8 @@
             </tr>
           </tbody>
         </table>
+
+
       </div>
       
       <!-- Pestaña Importación y Asignación -->
@@ -85,6 +91,8 @@
         </div>
       </div>
       
+
+
       <!-- Modal para asignar RFID a un activo -->
       <div v-if="showAssignModal" class="modal d-block" tabindex="-1">
         <div class="modal-dialog">
@@ -122,6 +130,8 @@
         </div>
       </div>
       
+
+
       <!-- Modal para editar activo -->
       <div v-if="showEditModal" class="modal d-block" tabindex="-1">
         <div class="modal-dialog">
@@ -158,6 +168,8 @@
           </div>
         </div>
       </div>
+
+
       
       <!-- Modal para crear un activo individual -->
       <div v-if="showCreateModal" class="modal d-block" tabindex="-1">
@@ -198,6 +210,7 @@
       </div>
       
     </div>
+    
   </template>
   
   <script>

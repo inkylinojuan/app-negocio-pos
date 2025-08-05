@@ -1,11 +1,13 @@
 <template>
     <div class="qr-container">
+
       <!-- Paso 1: escanear manilla -->
       <div v-if="step === 1">
         <QrStream @decode="onManillaDecode" />
         <p class="text-danger mt-2" v-if="codeError">{{ codeError }}</p>
       </div>
   
+      
       <!-- Paso 2: captura RFID y opción preregistro -->
       <div v-else-if="step === 2">
         <div class="mb-3">
@@ -30,11 +32,14 @@
         <p class="text-danger mt-2" v-if="codeError">{{ codeError }}</p>
       </div>
   
+
       <!-- Paso 3: escanear preregistro y finalizar -->
       <div v-else-if="step === 3">
         <QrStream @decode="onPreregrestrationDecode" />
         <p class="text-danger mt-2" v-if="codeError">{{ codeError }}</p>
       </div>
+
+
         <!-- Feedback final -->
             <div v-if="feedback" class="alert alert-success mt-3">
         {{ feedback }}
@@ -54,6 +59,7 @@
 
   const router = useRouter()
   
+
   // Estado de la secuencia
   const step = ref(1)            // 1=manilla, 2=RFID, 3=preregistro
   const rfidInput = ref('')      // Valor del RFID leido del usuario
@@ -66,12 +72,16 @@
   const feedback = ref('')
   const newUrl = ref('')
 
+
     // Contexto de negocio
   const businessStore = useBusinessStore()
   const businessId = businessStore.businessId || localStorage.getItem('businessId')
   const bizInfo  = JSON.parse(localStorage.getItem('businessInfo') || '{}')
   const businessName = bizInfo.name || businessStore.businessInfo.name
   
+  
+  
+
   // Parseo de QR: detecta preregistro (/preregistro/:b/:id) o manilla (string plano)
   function parseQrResult(result) {
     // 1) Si viene con ?uid= en cualquier parte de la cadena
@@ -81,20 +91,26 @@
     }
 
     try {
+
         // 2) Intentamos interpretar como URL estándar
         const url = new URL(result)
+
         // 2.a) preregistro: /preregistro/:businessId/:docId
+
         if (url.pathname.startsWith('/preregistro/')) {
         const [, , businessId, docId] = url.pathname.split('/')
         return { type: 'preregistro', businessId, docId }
         }
+
         // 2.b) si fuese otra URL con param uid en query
+
         const uidParam = url.searchParams.get('uid')
         if (uidParam) {
         return { type: 'codigosqr', uid: uidParam }
         }
         return null
     } catch {
+
         // 3) Cadena libre (se asume manilla)
         return { type: 'codigosqr', uid: result }
     }
@@ -110,6 +126,7 @@
       return
     }
     scannedUid.value = parsed.uid
+
     // Validar existencia en Firestore
     const qrRef = doc(db, 'CodigosQR', scannedUid.value)
     const snap = await getDoc(qrRef)
@@ -162,9 +179,12 @@
       codeError.value = 'QR de preregistro no válido'
       return
     }
+
+
     //businessId.value = parsed.businessId
     scannedDocId.value = parsed.docId
   
+
     // Obtener datos del preregistro
     const preRef = doc(db, 'businesses', businessId, 'preregistro',scannedDocId.value)
     const preSnap = await getDoc(preRef)
@@ -185,6 +205,7 @@
     console.log("businessId.value", businessId)
     try {
       const { user } = await signInAnonymously(auth)
+
       // Crear registro en businesses/{businessId}/users/{uid}
       const userRef = doc(
         db,
@@ -205,6 +226,7 @@
         roles: ['Cliente']   
       }, { merge: true })  
 
+      
       // Marcar la manilla como asignada
       const qrRef = doc(db, 'CodigosQR', scannedUid.value)
       await updateDoc(qrRef, {
