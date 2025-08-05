@@ -15,7 +15,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
@@ -32,7 +32,6 @@ export default {
     const isLoggedIn   = ref(false)
     const isInventario = ref(false)
     const isManilla    = ref(false)
-    const isSidebarCollapsed = ref(false)
 
     // Computed para el rol desde el store
     const userRole = computed(() => authStore.userRole)
@@ -42,13 +41,6 @@ export default {
       isLoggedIn.value   = !!user
       isInventario.value = user && userRole.value === 'Inventario'
       isManilla.value    = user && userRole.value === 'Manilla'
-    })
-
-    // Escuchar eventos del sidebar
-    onMounted(() => {
-      window.addEventListener('sidebar-toggle', (event) => {
-        isSidebarCollapsed.value = event.detail.isCollapsed
-      })
     })
 
     // Nuevo: sólo mostramos menú si NO somos Inventario ni Manilla
@@ -72,8 +64,7 @@ export default {
       }
       // Sólo si mostramos menú → dejamos espacio
       if (showMenu.value) {
-        const marginLeft = isSidebarCollapsed.value ? '50px' : '250px'
-        return { marginLeft, padding: '1rem', transition: 'margin-left 0.3s ease' }
+        return { marginLeft: '250px', padding: '1rem' }
       }
       // En cualquier otro caso → sin margen
       return { marginLeft: '0px', padding: '0rem' }
