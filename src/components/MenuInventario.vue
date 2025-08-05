@@ -30,6 +30,7 @@
               role="button"
               data-bs-toggle="dropdown"
               aria-expanded="false"
+              @click.prevent="toggleDropdown('dropdownActivosFijos')" 
             >
               Activos Fijos
             </a>
@@ -192,16 +193,46 @@
 </template>
 
 <script>
+import { Collapse, Dropdown } from 'bootstrap';
+
 export default {
   name: "MenuInventario",
+  mounted() {
+    this.initDropdowns();
+  },
   methods: {
-    closeMenu() {
-      const collapseEl = document.getElementById("navbarSupportedContent");
-      if (collapseEl && window.bootstrap && window.bootstrap.Collapse) {
-        const instance = window.bootstrap.Collapse.getInstance(collapseEl);
-        (instance || new window.bootstrap.Collapse(collapseEl, { toggle: false })).hide();
+    initDropdowns() {
+      // Inicializar todos los dropdowns
+      this.dropdowns = {};
+      const dropdownElements = this.$el.querySelectorAll('.dropdown-toggle');
+      
+      dropdownElements.forEach(el => {
+        const dropdownId = el.id;
+        this.dropdowns[dropdownId] = new Dropdown(el);
+      });
+    },
+    
+    toggleDropdown(dropdownId) {
+      if (this.dropdowns[dropdownId]) {
+        this.dropdowns[dropdownId].toggle();
       }
     },
+    
+    closeMenu() {
+      const navbar = this.$refs.navbarCollapse;
+      if (navbar && navbar.classList.contains('show')) {
+        const bsCollapse = new Collapse(navbar, { toggle: false });
+        bsCollapse.hide();
+      }
+      
+      // Cerrar todos los dropdowns abiertos
+      Object.values(this.dropdowns).forEach(dropdown => {
+        const menu = dropdown._menu;
+        if (menu.classList.contains('show')) {
+          dropdown.hide();
+        }
+      });
+    }
   },
 };
 </script>
