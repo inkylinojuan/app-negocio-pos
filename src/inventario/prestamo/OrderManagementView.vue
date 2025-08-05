@@ -143,37 +143,85 @@
                     <option value="Entregada">Entregada</option>
                   </select>
                 </div>
-                <!-- Items -->
-                <h5>Equipos solicitados</h5>
-                <div v-for="(item, idx) in form.items" :key="idx" class="row g-2 align-items-end">
+                <div class="row mb-3 align-items-end">
+                  <!-- Selección de plantilla de grupo -->
                   <div class="col-md-6">
-                    <label class="form-label">Categoría</label>
-                    <input
-                        list="cat-list"
-                        v-model="item.categoryName"
-                        @change="onCategoryChange(item)"
-                        class="form-control"
-                    />
-                    <datalist id="cat-list">
-                    <option v-for="c in categories" :key="c.id" :value="c.name" />
-                    </datalist>
+                    <label class="form-label">Agregar por Grupo</label>
+                    <select v-model="selectedGroup" @change="onGroupSelect" class="form-select">
+                      <option value="" disabled>Seleccionar grupo…</option>
+                      <option v-for="g in groups" :key="g.id" :value="g">
+                        {{ g.name }}
+                      </option>
+                    </select>
                   </div>
-                  <div class="col-md-3">
-                    <label class="form-label">Cantidad</label>
-                    <input
-                      type="number"
-                      v-model.number="item.quantity"
-                      class="form-control"
-                      min="1"
-                      @change="checkAvailability(item)"
-                    />
-                  </div>
-                  <div class="col-md-2">
-                    <button class="btn btn-outline-danger" @click.prevent="removeItem(idx)">X</button>
+                  <div class="col-md-6 text-end">
+                    <button class="btn btn-sm btn-outline-secondary" @click="clearGroupSelection">
+                      Limpiar selección
+                    </button>
                   </div>
                 </div>
-                <button class="btn btn-sm btn-secondary mt-2" @click.prevent="addItem">Agregar Equipo</button>
-                <p class="mt-2"><strong>Total Items:</strong> {{ form.items.length }}</p>
+                <!-- Items -->
+                <h5>Equipos solicitados</h5>
+                <table class="table table-sm table-bordered">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Categoría</th>
+                      <th style="width:80px">Cantidad</th>
+                      <th style="width:80px">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(item, idx) in form.items" :key="idx">
+                      <!-- CATEGORÍA: si no está asignada, muestro el datalist, si ya la eligió, solo el texto -->
+                      <td>
+                        <template v-if="!item.category">
+                          <input
+                            list="cat-list"
+                            v-model="item.categoryName"
+                            @change="onCategoryChange(item)"
+                            class="form-control form-control-sm"
+                            placeholder="Selecciona categoría"
+                          />
+                          <datalist id="cat-list">
+                            <option v-for="c in categories" :key="c.id" :value="c.name"/>
+                          </datalist>
+                        </template>
+                        <template v-else>
+                          {{ item.categoryName }}
+                        </template>
+                      </td>
+
+                      <!-- CANTIDAD: siempre editable -->
+                      <td>
+                        <input
+                          type="number"
+                          v-model.number="item.quantity"
+                          class="form-control form-control-sm"
+                          min="1"
+                          @change="checkAvailability(item)"
+                        />
+                      </td>
+
+                      <!-- ACCIÓN: eliminar línea -->
+                      <td>
+                        <button class="btn btn-sm btn-outline-danger" @click.prevent="removeItem(idx)">
+                          ✕
+                        </button>
+                      </td>
+                    </tr>
+
+                    <tr v-if="form.items.length === 0">
+                      <td colspan="3" class="text-center text-muted">
+                        No hay equipos solicitados
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <!-- opcionalmente dejas tu botón para agregar uno a uno -->
+                <button class="btn btn-sm btn-secondary" @click.prevent="addItem">
+                  + Agregar equipo
+                </button>
+                <p class="mt-2"><strong>Total líneas:</strong> {{ form.items.length }}</p>
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" @click="closeModal">Cancelar</button>
@@ -186,7 +234,7 @@
 
             <!-- Modal de Empacado -->
             <div v-if="showPackingModal" class="modal d-block" style="background:rgba(0,0,0,0.5)">
-        <div class="modal-dialog modal-xl">
+        <div class="modal-dialog modal-fullscreen-sm-down modal-lg">
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title">Empacar Orden #{{ currentOrder.number }}</h5>
@@ -199,10 +247,43 @@
                 <strong>Evento:</strong> {{ currentOrder.eventName }}<br>
                 <strong>Fecha del evento:</strong> {{ formatDate(currentOrder.eventDate) }}<br>
               </div>
-
               <h5>Equipos solicitados</h5>
-              <div v-for="(item, idx) in currentOrder.items" :key="idx" class="mb-4">
+              <div class="mb-3 d-flex justify-content-end">
+                <button class="btn btn-sm btn-success" @click="readAll">
+                  Leer Todo
+                </button>
+              </div>
+              <!-- justo encima del v-for actual -->
+              <div v-if="readingAllMode" class="mb-4 p-3 border rounded bg-light">
                 <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h5>Lectura Masiva de Activos</h5>
+                  <button class="btn btn-sm btn-outline-danger" @click="stopBulkRead">
+                    Detener Lectura
+                  </button>
+                </div>
+
+                <div v-for="item in currentOrder.items" :key="item.category.id" class="mb-3">
+                  <strong>{{ item.categoryName }}</strong>
+                  <span class="ms-2 badge bg-info">
+                    {{ (detectedAssetsAll[item.category.id] || []).length }} / {{ item.quantity }}
+                  </span>
+                  <ul class="list-group list-group-sm mt-1">
+                    <li v-for="a in detectedAssetsAll[item.category.id]" :key="a.id" class="list-group-item">
+                      {{ a.activo.nombre }} — {{ a.tag }}
+                    </li>
+                  </ul>
+                </div>
+
+                <button 
+                  class="btn btn-success w-100" 
+                  :disabled="!isAllDetected" 
+                  @click="assignAllBulk">
+                  Asignar todos los activos detectados
+                </button>
+              </div>
+
+              <div v-for="(item, idx) in currentOrder.items" :key="idx" class="mb-4">
+                <div v-if="!item.completed" class="d-flex justify-content-between align-items-center mb-2">
                   <h6>{{ item.categoryName }} (Cantidad: {{ item.quantity }})</h6>
                   <button class="btn btn-sm btn-primary" 
                         @click="handleClickLoadAssets(item, $event)" 
@@ -211,6 +292,19 @@
                     </button>
                 </div>
 
+                <div v-if="readingAllMode && !item.completed">
+                  <h6>Activos detectados ({{ detectedAssetsAll[item.category.id]?.length }} / {{ item.quantity }})</h6>
+                  <ul class="list-group mb-3">
+                    <li v-for="a in detectedAssetsAll[item.category.id]" :key="a.id" class="list-group-item">
+                      {{ a.activo.nombre }} — {{ a.tag }}
+                    </li>
+                  </ul>
+                  <button class="btn btn-sm btn-success"
+                          :disabled="detectedAssetsAll[item.category.id].length !== item.quantity"
+                          @click="() => assignAssetsToCategory(item, detectedAssetsAll[item.category.id])">
+                    Asignar todos
+                  </button>
+                </div>
                 <!-- Lista de activos disponibles para esta categoría -->
                 <div v-if="currentCategoryAssets[item.category.id] && activeCategoryId === item.category.id" class="mb-3">
                     <a class="btn btn-link p-0 mb-2" 
@@ -288,12 +382,10 @@
                   </button>
                 </div>
                 <div v-if="item.completed && item.assignedAssets && item.assignedAssets.length > 0" class="mt-3 alert alert-success p-2">
-                <h6>Activos asignados a esta categoría:</h6>
+                <!--<h6>Activos asignados a esta categoría:</h6>-->
                 <ul class="list-group list-group-flush">
                     <li v-for="assignedAsset in item.assignedAssets" :key="assignedAsset.id" class="list-group-item list-group-item-success">
-                        <strong>{{ assignedAsset.nombre }}</strong> ({{ assignedAsset.codigoInterno }}) / {{ assignedAsset.ubicacionId }} - RFID: {{ assignedAsset.id }}
-                      <br>
-                      Descripción: {{ assignedAsset.descripcion }}
+                        <strong>{{ assignedAsset.nombre }}</strong> ({{ assignedAsset.codigoInterno }}) / {{ assignedAsset.ubicacionId }}
                       </li>
                   </ul>
               </div>
@@ -558,6 +650,15 @@ export default {
         actualDeliveryTime: ''
       });
 
+      const rfidVerificados = ref(new Set())
+      // —————————— nuevo estado para Grupos ——————————
+      const groups         = ref([])
+      const selectedGroup  = ref(null)
+
+      const readingAllMode    = ref(false)
+      const loadedAssetsAll   = ref({})  // { categoriaId: [ activos… ] }
+      const detectedAssetsAll = ref({})  // { categoriaId: [ detectados… ] }
+
       // Asegúrate de que 'currentTab' esté definido y con un valor inicial:
       //const currentTab = ref('pedida') // O 'empacada', según tu preferencia inicial
 
@@ -569,7 +670,45 @@ export default {
       // Cargar ubicaciones
       const locsSnap = await getDocs(collection(db, 'businesses', businessId, 'locations'))
       locations.value = locsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+      const grpSnap = await getDocs(collection(db, 'businesses', businessId, 'grupos'))
+      groups.value = grpSnap.docs.map(d => ({ id:d.id, ...d.data() }))
+      // Exponer funciones y datos al contexto global
+      window.handleRFIDVerificacion = handleRFIDVerificacion
+      window.rfidVerificados = rfidVerificados
+      window.currentPackedOrder = currentPackedOrder
+      window.processRFIDTag = processRFIDTag
+
     })
+
+    // Define la función de verificación
+    function handleRFIDVerificacion(tag) {
+      const cleanTag = tag.toUpperCase().trim()
+
+      if (
+        !window.currentPackedOrder ||
+        !window.currentPackedOrder.value ||
+        !Array.isArray(window.currentPackedOrder.value.items)
+      ) {
+        console.warn("⚠️ currentPackedOrder no está listo o mal estructurado")
+        return
+      }
+
+      const allAssets = window.currentPackedOrder.value.items.flatMap(item =>
+        Array.isArray(item.assignedAssets) ? item.assignedAssets : []
+      )
+
+      const match = allAssets.find(asset => asset.rfid?.toUpperCase() === cleanTag)
+
+      if (match) {
+        if (!rfidVerificados.value.has(cleanTag)) {
+          rfidVerificados.value.add(cleanTag)
+          rfidVerificados.value = new Set(rfidVerificados.value) // forzar reactividad
+          console.log(`✅ Verificado: ${cleanTag}`)
+        }
+      } else {
+        console.warn(`❌ Tag no reconocido: ${cleanTag}`)
+      }
+    }
 
     const isPackingComplete = computed(() => {
       if (!currentOrder.value) return false
@@ -686,100 +825,65 @@ export default {
       }
     }
 
-    function processRFIDTag(rfidTag) {
-      if (!activeCategoryId.value) {
-        console.warn("No hay categoría activa para asignar el tag.");
-        return;
-      }
+function processRFIDTag(rawTag) {
+  // 1) Normalizar
+  const cleanTag = String(rawTag).replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+  if (!cleanTag) return
 
-      // Normalizar el tag: quitar no alfanuméricos y pasar a mayúsculas
-      const cleanTag = rfidTag.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  // 2) Debounce guard
+  if (cleanTag === lastProcessedRFID.value) return
+  lastProcessedRFID.value = cleanTag
 
-      if (cleanTag.length === 0) {
-        console.warn("Tag RFID vacío después de la limpieza.");
-        return;
-      }
+  // 3) Elegir el “pool” de assets a buscar
+  const pool = readingAllMode.value
+    ? loadedAssetsAll.value
+    : { [activeCategoryId.value]: currentCategoryAssets.value[activeCategoryId.value] || [] }
 
-      // Evitar procesar el mismo tag repetidamente en un corto período
-      if (cleanTag === lastProcessedRFID.value) {
-        console.log(`Tag ${cleanTag} ya fue procesado recientemente. Ignorando.`);
-        return;
-      }
+  let foundAsset = null, foundCatId = null
 
-      lastProcessedRFID.value = cleanTag; // Almacenar el tag recién procesado
+  // 4) Buscar en cada categoría
+  for (const [catId, assets] of Object.entries(pool)) {
+    // saltar si ya completamos la cantidad de esa categoría
+    const item   = currentOrder.value.items.find(i => i.category.id === catId)
+    const picked = readingAllMode.value
+      ? detectedAssetsAll.value[catId]
+      : rfidDetectedAssets.value
 
-      console.log("RFID limpio recibido:", cleanTag);
+    if (picked.length >= (item?.quantity||0)) continue
 
-      const assets = currentCategoryAssets.value[activeCategoryId.value] || [];
-      console.log("Activos disponibles para la categoría activa:", assets);
+    for (const asset of assets) {
+      if (!asset.tag) continue
+      const tagClean = String(asset.tag).replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
 
-      let foundAsset = null;
-
-      // Buscar activo por RFID (coincidencia exacta o parcial robusta)
-      // Iteramos sobre los activos disponibles para encontrar una coincidencia
-      for (const asset of assets) {
-        if (!asset.tag) continue;
-
-        const assetRFIDClean = String(asset.tag).replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-
-        // Estrategia de coincidencia:
-        // 1. Coincidencia exacta
-        if (assetRFIDClean === cleanTag) {
-          foundAsset = asset;
-          break;
-        }
-        // 2. Si el tag leído es más largo, verificar si contiene el RFID del activo (o viceversa)
-        // Esto ayuda con lectores que a veces añaden prefijos/sufijos
-        if (cleanTag.includes(assetRFIDClean) || assetRFIDClean.includes(cleanTag)) {
-          foundAsset = asset;
-          break;
-        }
-        // 3. Coincidencia por subcadena (e.g., últimos 16 caracteres de un EPC)
-        // Ajusta la longitud si tu EPC es diferente, comúnmente son 24 caracteres (12 bytes)
-        const commonEpcLength = 24; // Longitud típica de un EPC en hexadecimal (12 bytes)
-        if (cleanTag.length >= commonEpcLength && assetRFIDClean.length >= commonEpcLength) {
-            const cleanTagLastPart = cleanTag.slice(-commonEpcLength);
-            const assetRFIDLastPart = assetRFIDClean.slice(-commonEpcLength);
-            if (cleanTagLastPart === assetRFIDLastPart) {
-                foundAsset = asset;
-                break;
-            }
-        } else if (cleanTag.length > 0 && assetRFIDClean.length > 0) { // Para IDs más cortos o diferentes
-            // Podrías ajustar esta lógica para buscar subcadenas si los IDs no son EPCs estándar
-            // Por ahora, se basa en la inclusión
-        }
-      }
-
-      console.log("Activo encontrado:", foundAsset);
-
-      if (foundAsset) {
-        console.log("Activo encontrado:", foundAsset);
-
-        // Verificar si ya fue agregado a la lista de detectados para la orden actual
-        if (rfidDetectedAssets.value.some(a => a.id === foundAsset.id)) {
-            alert(`El activo '${foundAsset.activo.name}' (RFID: ${foundAsset.rfid}) ya ha sido escaneado para esta categoría.`);
-            return;
-        }
-
-        // Verificar si ya se ha alcanzado la cantidad requerida para la categoría activa
-        const currentItem = currentOrder.value.items.find(i => i.category.id === activeCategoryId.value);
-        if (!currentItem) {
-            console.error("No se encontró el item de la orden para la categoría activa.");
-            return;
-        }
-
-        if (rfidDetectedAssets.value.length >= currentItem.quantity) {
-          alert(`Ya se ha alcanzado la cantidad requerida (${currentItem.quantity}) para la categoría '${currentItem.categoryName}'.`);
-          return;
-        }
-
-        // Agregar a los activos detectados
-        rfidDetectedAssets.value.push(foundAsset);
-      } else {
-        console.error(`Activo con RFID '${cleanTag}' no encontrado o no disponible para la categoría activa.`);
-        alert(`Activo con RFID '${cleanTag}' no encontrado o no disponible para la categoría actual.`);
+      // matching: exacto, inclusión, EPC final, etc.
+      if (
+        tagClean === cleanTag ||
+        cleanTag.includes(tagClean) ||
+        tagClean.includes(cleanTag) ||
+        (cleanTag.slice(-24) === tagClean.slice(-24))
+      ) {
+        foundAsset = asset
+        foundCatId  = catId
+        break
       }
     }
+    if (foundAsset) break
+  }
+
+  if (!foundAsset) return
+
+  // 5) Agregar al array correspondiente evitando duplicados
+  if (readingAllMode.value) {
+    const arr = detectedAssetsAll.value[foundCatId]
+    if (!arr.some(a => a.id === foundAsset.id)) {
+      arr.push(foundAsset)
+    }
+  } else {
+    if (!rfidDetectedAssets.value.some(a => a.id === foundAsset.id)) {
+      rfidDetectedAssets.value.push(foundAsset)
+    }
+  }
+}
 
 
     function removeDetectedAsset(assetId) {
@@ -867,62 +971,73 @@ export default {
       return rfidDetectedAssets.value.some(a => a.id === assetId) && activeCategoryId.value === categoryId;
     }
 
-    async function assignAssetsToCategory(item) {
-        if (rfidDetectedAssets.value.length !== item.quantity) {
-          alert(`Debes escanear exactamente ${item.quantity} activos para '${item.categoryName}'. Actualmente tienes ${rfidDetectedAssets.value.length}.`);
-          return;
-        }
-        
-        const batch = writeBatch(db)
-        
-        // Actualizar estado de cada activo en 'tagsMovil' a 'Prestado'
-        rfidDetectedAssets.value.forEach(asset => {
-          const assetRef = doc(db, 'businesses', businessId, 'tagsMovil', asset.id)
-          batch.update(assetRef, { status: 'Prestado' }) // Cambiar a 'Prestado'
-        })
-        
-        // Actualizar la orden con los IDs de los activos asignados para esta categoría
-        const orderRef = doc(ordersCol, currentOrder.value.id)
-        const updatedItems = currentOrder.value.items.map(i => {
-          if (i.category.id === item.category.id) {
-            return {
-              ...i,
-              completed: true, // Marcar como completada esta parte del empacado
-              // <<< AQUI ESTÁ EL CAMBIO CLAVE >>>
-              assignedAssets: rfidDetectedAssets.value.map(asset => ({
-                id: asset.id, // ID del documento tagsMovil
-                codigoInterno: asset.activo.codigoInterno || null,
-                descripcion: asset.activo.descripcion || null,
-                nombre: asset.activo.nombre || null, // Asumiendo que 'name' es el 'nombre' del activo
-                ubicacionId: asset.activo.ubicacion.name ? asset.activo.ubicacion.code : null, // Si 'ubicacion' es un objeto con un 'id'
-                rfid: asset.rfid || null // También puedes guardar el RFID si lo necesitas
-              }))
-            }
-          }
-          return i
-        })
-        
-        batch.update(orderRef, {
-          items: updatedItems,
-          updatedAt: serverTimestamp() // Marcar la orden como actualizada
-        })
-        
-        try {
-          await batch.commit()
-          
-          // Actualizar estado local DESPUÉS del commit exitoso
-          currentOrder.value.items = updatedItems; // Reflejar los cambios en el modelo local
-          rfidDetectedAssets.value = []; // Limpiar los activos detectados para la próxima categoría
-          // ¡Importante! Si se queda el activeCategoryId, seguirá mostrando el modo lectura RFID
-          activeCategoryId.value = null; // Desactivar la categoría actual para esconder la sección de lectura RFID
-          stopRFIDReading(); // Detener la lectura RFID
-          
-          alert(`${item.quantity} activos asignados a ${item.categoryName} y marcados como 'Prestado'.`);
-        } catch (error) {
-          console.error("Error asignando activos:", error)
-          alert("Error al asignar activos. Por favor, inténtalo de nuevo.")
-        }
+    async function assignAssetsToCategory(item, assetsList = null) {
+      // 1) Decide el array que vamos a asignar
+      const toAssign = assetsList ?? rfidDetectedAssets.value;
+
+      // 2) Comprobación de cantidad
+      if (toAssign.length !== item.quantity) {
+        alert(
+          `Debes escanear exactamente ${item.quantity} activos para '${item.categoryName}'. Actualmente tienes ${toAssign.length}.`
+        );
+        return;
       }
+
+      const batch = writeBatch(db);
+
+      // 3) Marcamos cada activo como 'Prestado'
+      toAssign.forEach(asset => {
+        const assetRef = doc(db, 'businesses', businessId, 'tagsMovil', asset.id);
+        batch.update(assetRef, { status: 'Prestado' });
+      });
+
+      // 4) Preparamos la nueva versión de items en la orden
+      const orderRef = doc(ordersCol, currentOrder.value.id);
+      const updatedItems = currentOrder.value.items.map(i => {
+        if (i.category.id === item.category.id) {
+          return {
+            ...i,
+            completed: true,
+            assignedAssets: toAssign.map(asset => ({
+              id: asset.id,
+              nombre: asset.activo.nombre,
+              codigoInterno: asset.activo.codigoInterno,
+              descripcion: asset.activo.descripcion,
+              ubicacionId: asset.activo.ubicacion.code,
+              rfid: asset.tag
+            }))
+          };
+        }
+        return i;
+      });
+
+      batch.update(orderRef, {
+        items: updatedItems,
+        updatedAt: serverTimestamp()
+      });
+
+      try {
+        await batch.commit();
+
+        // 5) Actualizamos el estado local
+        currentOrder.value.items = updatedItems;
+
+        // Limpiamos arrays y estados de lectura
+        rfidDetectedAssets.value = [];
+        if (assetsList) {
+          // sólo si venías de "Leer Todo"
+          detectedAssetsAll.value[item.category.id] = [];
+          readingAllMode.value = false;
+        }
+        activeCategoryId.value = null;
+        stopRFIDReading();
+
+        alert(`${toAssign.length} activos asignados a ${item.categoryName} y marcados como 'Prestado'.`);
+      } catch (error) {
+        console.error("Error asignando activos:", error);
+        alert("Error al asignar activos. Por favor, inténtalo de nuevo.");
+      }
+    }
 
     async function completePacking() {
       // Verificar si todas las categorías requeridas están completas
@@ -1172,11 +1287,12 @@ export default {
       });
 
     // Asegurarse de detener la lectura RFID si el componente se desmonta inesperadamente
-    watch(showPackingModal, (newVal) => {
-      if (!newVal) {
-        stopRFIDReading();
-      }
-    });
+      watch(showPackingModal, val => {
+        if (!val && readingAllMode.value) {
+          stopRFIDReading()
+          readingAllMode.value = false
+        }
+      })
 
     function openPackedOrderModal(order) {
         currentPackedOrder.value = JSON.parse(JSON.stringify(order)); // Deep copy de la orden
@@ -1488,6 +1604,84 @@ export default {
         }
       }
 
+        // —————————— lógica al seleccionar un grupo ——————————
+    function onGroupSelect() {
+      if (!selectedGroup.value) return
+
+      selectedGroup.value.categoryIds.forEach(catId => {
+        const cat = categories.value.find(c => c.id === catId)
+        if (!cat) return
+        // ¿ya existe en form.items?
+        const existing = form.value.items.find(i => i.category?.id === cat.id)
+        if (existing) {
+          // incrementa la cantidad
+          existing.quantity++
+        } else {
+          // lo agrega con cantidad =1
+          form.value.items.push({
+            category: { id: cat.id, name: cat.name },
+            categoryName: cat.name,
+            quantity: 1,
+            assignedAssets: []
+          })
+        }
+      })
+
+      // volver a dejar el dropdown en blanco
+      selectedGroup.value = null
+    }
+
+    function clearGroupSelection() {
+      selectedGroup.value = null
+    }
+
+    async function readAll() {
+      // 1) Cargar todos los assets “Disponibles” de cada categoría en la orden
+      const map = {}
+      for (const item of currentOrder.value.items) {
+        const snap = await getDocs(query(
+          collection(db, 'businesses', businessId, 'tagsMovil'),
+          where('activo.category.name', '==', item.categoryName),
+          where('status', '==', 'Disponible')
+        ))
+        map[item.category.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      }
+      loadedAssetsAll.value = map
+
+      // 2) Inicializar detectados por categoría
+      detectedAssetsAll.value = {}
+      Object.keys(map).forEach(catId => {
+        detectedAssetsAll.value[catId] = []
+      })
+
+      // 3) Activar modo “lectura masiva”
+      readingAllMode.value = true
+      startRFIDReading()
+    }
+
+    function stopBulkRead() {
+      stopRFIDReading()
+      readingAllMode.value = false
+    }
+        // Comprueba que para cada categoría ya has detectado la cantidad esperada
+    const isAllDetected = computed(() => {
+      return currentOrder.value.items.every(item => {
+        const arr = detectedAssetsAll.value[item.category.id] || []
+        return arr.length === item.quantity
+      })
+    })
+    // Método que llama a tu assignAssetsToCategory por cada categoría
+    function assignAllBulk() {
+      currentOrder.value.items.forEach(item => {
+        const arr = detectedAssetsAll.value[item.category.id] || []
+        if (arr.length === item.quantity) {
+          assignAssetsToCategory(item, arr)
+        }
+      })
+      // una vez que asignes todo, limpias el modo bulk
+      stopBulkRead()
+    }
+
     return {
       orders, categories, form, showModal, isEditing,
       openCreateModal, openEditModal, closeModal,
@@ -1520,10 +1714,42 @@ export default {
     deliveryForm,
     markOrderAsDispatched,
     markOrderAsDelivered,
+    rfidVerificados,
+    handleRFIDVerificacion,
+    groups,
+    selectedGroup,
+    onGroupSelect,
+    clearGroupSelection,
+    form,
+    categories,
+    readingAllMode,
+    readAll,
+    detectedAssetsAll,
+    isAllDetected,
+    assignAllBulk,
     searchQuery // <--- Asegúrate de que esta línea exista
     }
-  }
+  } 
 }
+    // Función requerida por la pistola para recibir tags
+    // Después:
+      window.appendTag = function (raw) {
+        try {
+          const data = JSON.parse(raw)
+          const tag = data.tag?.toUpperCase?.().trim()
+
+          if (!tag) {
+            console.warn("⚠️ Tag vacío o inválido:", raw)
+            return
+          }
+
+          // Si estamos en el modal de empacado, procesamos con tu lógica de lectura:
+          window.processRFIDTag(tag)
+        } catch (err) {
+          console.error("❌ Error al parsear tag:", err, raw)
+        }
+      }
+
 </script>
   
   <style scoped>

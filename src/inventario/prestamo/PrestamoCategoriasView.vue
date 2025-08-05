@@ -21,6 +21,14 @@
             Ubicaciones
           </a>
         </li>
+        <li class="nav-item">
+          <a href="#"
+            class="nav-link"
+            :class="{ active: activeTab === 'grupos' }"
+            @click.prevent="activeTab = 'grupos'">
+            Grupos
+          </a>
+        </li>
       </ul>
   
       <!-- Pestaña de Categorías de Préstamo -->
@@ -206,6 +214,38 @@
           </tbody>
         </table>
       </div>
+
+      <!-- Pestaña Grupos -->
+      <div v-if="activeTab === 'grupos'">
+        <h3 class="mb-3">Grupos de Categorías</h3>
+
+        <!-- Botón para crear nuevo grupo -->
+        <button class="btn btn-primary mb-3" @click="openGroupModal()">+ Nuevo Grupo</button>
+
+        <!-- Tabla de grupos -->
+        <table class="table table-striped table-hover">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th># Categorías</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="g in sortedFilteredGroups" :key="g.id">
+              <td>{{ g.name }}</td>
+              <td>{{ g.categoryIds.length }}</td>
+              <td>
+                <button class="btn btn-sm btn-outline-secondary me-1" @click="startEditGroup(g)">Editar</button>
+                <button class="btn btn-sm btn-outline-danger" @click="confirmDeleteGroup(g)">Eliminar</button>
+              </td>
+            </tr>
+            <tr v-if="sortedFilteredGroups.length===0">
+              <td colspan="3" class="text-center text-muted">No hay grupos creados.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
   
       <!-- Custom Message/Confirmation Modal -->
       <div v-if="showCustomModal" class="modal d-block" tabindex="-1">
@@ -228,6 +268,63 @@
                 {{ customModalType === 'confirm' || customModalType === 'confirm-text' ? 'Aceptar' : 'Cerrar' }}
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Grupos -->
+      <div v-if="showGroupModal" class="modal d-block" style="background:rgba(0,0,0,0.5)">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <form @submit.prevent="saveGroup">
+              <div class="modal-header">
+                <h5 class="modal-title">{{ isEditingGroup ? 'Editar' : 'Nuevo' }} Grupo</h5>
+                <button type="button" class="btn-close" @click="closeGroupModal()"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label class="form-label">Nombre del Grupo</label>
+                  <input v-model="groupForm.name" class="form-control" required/>
+                </div>
+                <div class="row">
+                  <!-- Buscador y lista disponibles -->
+                  <div class="col-md-5">
+                    <label class="form-label">Categorias disponibles</label>
+                    <input v-model="groupSearchLeft" class="form-control mb-2" placeholder="Buscar…"/>
+                    <div class="list-group list-group-flush overflow-auto" style="max-height:300px">
+                      <a v-for="cat in filteredLeftCategories" :key="cat.id"
+                        href="#"
+                        class="list-group-item list-group-item-action"
+                        @click.prevent="selectCategory(cat)">
+                        {{ cat.name }}
+                      </a>
+                    </div>
+                  </div>
+                  <!-- Botones de transferencia -->
+                  <div class="col-md-2 d-flex flex-column justify-content-center align-items-center">
+                    <button type="button" class="btn btn-outline-primary mb-2"
+                            @click="addAll()">≫</button>
+                    <button type="button" class="btn btn-outline-primary"
+                            @click="removeAll()">≪</button>
+                  </div>
+                  <!-- Lista seleccionadas -->
+                  <div class="col-md-5">
+                    <label class="form-label">Categorias seleccionadas</label>
+                    <input v-model="groupSearchRight" class="form-control mb-2" placeholder="Buscar…"/>
+                    <ul class="list-group overflow-auto" style="max-height:300px">
+                      <li v-for="cat in filteredRightCategories" :key="cat.id" class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ cat.name }}
+                        <button class="btn btn-sm btn-outline-danger" @click="deselectCategory(cat)">×</button>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button class="btn btn-secondary" @click="closeGroupModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">{{ isEditingGroup ? 'Guardar' : 'Crear' }}</button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -265,6 +362,22 @@
       const confirmTextInput = ref(''); // Input for confirm-text
       let customModalResolve = () => {};
       let customModalReject = () => {};
+
+      // Estados de grupos
+      const grupos = ref([])
+      const showGroupModal = ref(false)
+      const isEditingGroup = ref(false)
+      const editGroupId = ref(null)
+      const groupForm = ref({ name:'', categoryIds: [] })
+
+      // Para el transfer
+      const allCategories = ref([])          // cargadas una sola vez
+      const groupSearchLeft = ref('')
+      const groupSearchRight = ref('')
+
+      // Firestore
+      const gruposCol = collection(db, 'businesses', businessId, 'grupos')
+      const catsCol   = collection(db, 'businesses', businessId, 'loanCategories')
   
       const openCustomModal = (title, message, type = 'alert', confirmText = '') => {
         customModalTitle.value = title;
@@ -324,6 +437,10 @@
           console.error("Error fetching categories:", error);
           openCustomModal('Error', 'No se pudieron cargar las categorías: ' + error.message);
         });
+        // listener categorías
+        onSnapshot(catsCol, snap=> allCategories.value = snap.docs.map(d=>({ id:d.id, ...d.data() })))
+        // listener grupos
+        onSnapshot(gruposCol, snap=> grupos.value = snap.docs.map(d=>({ id:d.id, ...d.data() })))
       });
   
       const addCategory = async () => {
@@ -554,6 +671,75 @@
           ubicacionSortDirection.value = 'asc';
         }
       };
+
+          // Apertura/Cierre modal
+    function openGroupModal() {
+      isEditingGroup.value = false
+      editGroupId.value = null
+      groupForm.value = { name:'', categoryIds: [] }
+      showGroupModal.value = true
+    }
+    function startEditGroup(g){
+      isEditingGroup.value = true
+      editGroupId.value = g.id
+      groupForm.value = { name:g.name, categoryIds: [...g.categoryIds] }
+      showGroupModal.value = true
+    }
+    function closeGroupModal() {
+      showGroupModal.value = false
+    }
+
+    // Transfer helpers
+    const leftCategories = computed(() =>
+      allCategories.value.filter(c=> !groupForm.value.categoryIds.includes(c.id))
+    )
+    const rightCategories = computed(() =>
+      allCategories.value.filter(c=>   groupForm.value.categoryIds.includes(c.id))
+    )
+    const filteredLeftCategories = computed(()=>{
+      const q = groupSearchLeft.value.toLowerCase()
+      return leftCategories.value.filter(c=> c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q))
+    })
+    const filteredRightCategories = computed(()=>{
+      const q = groupSearchRight.value.toLowerCase()
+      return rightCategories.value.filter(c=> c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q))
+    })
+    function selectCategory(cat){
+      groupForm.value.categoryIds.push(cat.id)
+    }
+    function deselectCategory(cat){
+      groupForm.value.categoryIds = groupForm.value.categoryIds.filter(id=> id!==cat.id)
+    }
+    function addAll(){
+      groupForm.value.categoryIds = allCategories.value.map(c=>c.id)
+    }
+    function removeAll(){
+      groupForm.value.categoryIds = []
+    }
+
+    // CRUD
+    async function saveGroup(){
+      const data = { 
+        name: groupForm.value.name,
+        categoryIds: [...groupForm.value.categoryIds]
+      }
+      if(isEditingGroup.value){
+        await updateDoc(doc(gruposCol, editGroupId.value), data)
+      } else {
+        await addDoc(gruposCol, data)
+      }
+      closeGroupModal()
+    }
+    async function confirmDeleteGroup(g){
+      if(confirm(`¿Eliminar grupo "${g.name}"?`)){
+        await deleteDoc(doc(gruposCol, g.id))
+      }
+    }
+
+    // Filtrado y orden por nombre
+    const sortedFilteredGroups = computed(()=>{
+      return grupos.value.slice().sort((a,b)=> a.name.localeCompare(b.name))
+    })
   
       return {
         activeTab,
@@ -596,6 +782,17 @@
         confirmTextInput,
         closeCustomModal,
         handleConfirmText,
+        // tabs
+        activeTab,
+        // groups
+        grupos, showGroupModal, openGroupModal, startEditGroup, closeGroupModal,
+        isEditingGroup, groupForm, saveGroup, confirmDeleteGroup,
+        // transfer
+        allCategories, groupSearchLeft, groupSearchRight,
+        filteredLeftCategories, filteredRightCategories,
+        selectCategory, deselectCategory, addAll, removeAll,
+        // listado
+        sortedFilteredGroups,
       };
     },
   };

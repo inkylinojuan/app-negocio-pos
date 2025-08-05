@@ -3,7 +3,7 @@
     <div >        
           <div class="mb-3">
             <label class="form-label">RFID leído:</label>
-            <input v-model="rfid" type="text" class="form-control" readonly />
+            <input v-model="rfid" type="text" class="form-control" />
           </div>
           <div>
             <p class="mb-0 small"><strong>Estado:</strong> {{ readingStatus }}</p>
@@ -126,7 +126,7 @@
         readingStatus.value = `Buscando información para RFID: ${rfidValue}`
         
         try {
-          const tagDoc = doc(db, 'businesses', businessId, "tags", rfidValue)
+          const tagDoc = doc(db, 'businesses', businessId, "tagsMovil", rfidValue)
           const tagSnap = await getDoc(tagDoc)
           
           if (tagSnap.exists()) {

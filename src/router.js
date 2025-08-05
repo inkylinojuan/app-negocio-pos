@@ -287,8 +287,7 @@ const routes = [
     name: 'OrdenesDePedido',
     component: () => import('./inventario/prestamo/OrderManagementView.vue'),
     meta: { requiresAuth: true, role: 'Inventario' }
-  }
-  
+  },
 ]
 
 // ... El resto del código del router (onAuthStateChanged, etc.)
