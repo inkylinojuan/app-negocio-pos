@@ -1,5 +1,5 @@
 <template>
-  <div class="container mt-5">
+  <div class="container mt-5" :class="{ 'sidebar-open': showEditModal || showEditUserModal }">
     <h2>Administración Superadmin</h2>
     
     <!-- Pestañas de navegación -->
@@ -40,9 +40,6 @@
             <th @click="sortBy('name')">
               Nombre <span v-if="sortKey==='name'">{{ sortOrderSymbol }}</span>
             </th>
-            <th>
-              ID 
-            </th>
             <th @click="sortBy('description')">
               Descripción <span v-if="sortKey==='description'">{{ sortOrderSymbol }}</span>
             </th>
@@ -67,7 +64,6 @@
         <tbody>
           <tr v-for="b in filteredAndSortedBusinesses" :key="b.id">
             <td>{{ b.name }}</td>
-            <td>{{ b.id }}</td>
             <td>{{ b.description }}</td>
             <td>{{ b.address }}</td>
             <td>{{ b.nit }}</td>
@@ -82,69 +78,84 @@
         </tbody>
       </table>
       
-      <!-- Botón para crear nuevo negocio -->
-      <button class="btn btn-primary" @click="openCreateModal">Crear Nuevo Negocio</button>
-      
-      <!-- Modal Editar Negocio -->
-      <div v-if="showEditModal" class="modal d-block" tabindex="-1">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <form @submit.prevent="updateBusiness">
-              <div class="modal-header">
-                <h5 class="modal-title">Editar Negocio</h5>
-                <button type="button" class="btn-close" @click="closeEditModal"></button>
-              </div>
-              <div class="modal-body">
-                <div class="mb-3">
-                  <label class="form-label">Nombre</label>
-                  <input v-model="currentBusiness.name" type="text" class="form-control" required />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Descripción</label>
-                  <textarea v-model="currentBusiness.description" class="form-control" required></textarea>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Dirección</label>
-                  <input v-model="currentBusiness.address" type="text" class="form-control" required />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">NIT</label>
-                  <input v-model="currentBusiness.nit" type="text" class="form-control" required />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Teléfono</label>
-                  <input v-model="currentBusiness.phone" type="text" class="form-control" required />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Email</label>
-                  <input v-model="currentBusiness.email" type="email" class="form-control" required />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Facturador</label>
-                  <input v-model="currentBusiness.facturador" type="text" class="form-control" required />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Régimen Tributario</label>
-                  <input v-model="currentBusiness.taxRegime" type="text" class="form-control" required />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Pie de Factura</label>
-                  <textarea v-model="currentBusiness.invoiceFooter" class="form-control" required></textarea>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Facturador</label>
-                  <input v-model="newBusiness.facturador" type="text" class="form-control" required />
-                </div>
-                <TipoInventarioSelector :key="businessKey" :business="currentBusiness" />
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" @click="closeEditModal">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
+             <!-- Botón para crear nuevo negocio -->
+       <button class="btn btn-primary" @click="openCreateModal">Crear Nuevo Negocio</button>
+       
+       <!-- Sidebar Editar Negocio -->
+       <div v-if="showEditModal" class="sidebar-overlay" :class="{ 'overlay-closing': isClosingSidebar }" @click="closeEditModal"></div>
+       <div v-if="showEditModal" class="edit-sidebar" :class="{ 'sidebar-closing': isClosingSidebar }">
+         <div class="sidebar-header">
+           <h5 class="sidebar-title">Editar Negocio</h5>
+           <button type="button" class="btn-close" @click="closeEditModal"></button>
+         </div>
+         <div class="sidebar-body">
+           <form @submit.prevent="updateBusiness">
+             <div class="form-row">
+               <div class="form-group">
+                 <label class="form-label">Nombre</label>
+                 <input v-model="currentBusiness.name" type="text" class="form-control form-control-sm" required />
+               </div>
+               <div class="form-group">
+                 <label class="form-label">Descripción</label>
+                 <textarea v-model="currentBusiness.description" class="form-control form-control-sm" rows="2" required></textarea>
+               </div>
+             </div>
+             
+             <div class="form-row">
+               <div class="form-group">
+                 <label class="form-label">Dirección</label>
+                 <input v-model="currentBusiness.address" type="text" class="form-control form-control-sm" required />
+               </div>
+               <div class="form-group">
+                 <label class="form-label">NIT</label>
+                 <input v-model="currentBusiness.nit" type="text" class="form-control form-control-sm" required />
+               </div>
+             </div>
+             
+             <div class="form-row">
+               <div class="form-group">
+                 <label class="form-label">Teléfono</label>
+                 <input v-model="currentBusiness.phone" type="text" class="form-control form-control-sm" required />
+               </div>
+               <div class="form-group">
+                 <label class="form-label">Email</label>
+                 <input v-model="currentBusiness.email" type="email" class="form-control form-control-sm" required />
+               </div>
+             </div>
+             
+             <div class="form-row">
+               <div class="form-group">
+                 <label class="form-label">Facturador</label>
+                 <input v-model="currentBusiness.facturador" type="text" class="form-control form-control-sm" required />
+               </div>
+               <div class="form-group">
+                 <label class="form-label">Régimen Tributario</label>
+                 <input v-model="currentBusiness.taxRegime" type="text" class="form-control form-control-sm" required />
+               </div>
+             </div>
+             
+             <div class="form-group">
+               <label class="form-label">Pie de Factura</label>
+               <textarea v-model="currentBusiness.invoiceFooter" class="form-control form-control-sm" rows="2" required></textarea>
+             </div>
+             
+             <TipoInventarioSelector :key="businessKey" :business="currentBusiness" />
+             
+             <div class="sidebar-footer">
+               <div class="button-group">
+                 <button type="button" class="btn btn-outline-secondary btn-sm" @click="closeEditModal">
+                   <i class="fas fa-times me-1"></i>Cancelar
+                 </button>
+                 <button type="submit" class="btn btn-primary btn-sm">
+                   <i class="fas fa-save me-1"></i>Guardar Cambios
+                 </button>
+               </div>
+             </div>
+           </form>
+         </div>
+       </div>
+       
+
       
       <!-- Modal Crear Negocio -->
       <div v-if="showCreateModal" class="modal d-block" tabindex="-1">
@@ -252,7 +263,7 @@
       
       <!-- Buscador -->
       <div class="mb-3">
-        <input v-model="userSearchQuery" type="text" class="form-control" placeholder="Buscar usuario..." />
+        <input v-model="userSearchQuery" type="text" class="form-control" placeholder="Buscar en email, rol, businessId y también en el nombre del negocio..." />
       </div>
       
       <!-- Tabla de usuarios -->
@@ -287,10 +298,90 @@
       </table>
 
       
-      <!-- Botón para crear usuario -->
-      <button class="btn btn-primary" @click="openCreateUserModal">Crear Usuario</button>
-      
-      <!-- Modal Crear Usuario -->
+             <!-- Botón para crear usuario -->
+       <button class="btn btn-primary" @click="openCreateUserModal">Crear Usuario</button>
+       
+       <!-- Sidebar Editar Usuario -->
+       <div v-if="showEditUserModal" class="sidebar-overlay" :class="{ 'overlay-closing': isClosingUserSidebar }" @click="closeEditUserModal"></div>
+       <div v-if="showEditUserModal" class="edit-sidebar" :class="{ 'sidebar-closing': isClosingUserSidebar }">
+         <div class="sidebar-header">
+           <h5 class="sidebar-title">Editar Usuario</h5>
+           <button type="button" class="btn-close" @click="closeEditUserModal"></button>
+         </div>
+         <div class="sidebar-body">
+           <form @submit.prevent="updateUser">
+             <div class="form-group">
+               <label class="form-label">Email</label>
+               <input v-model="currentUser.email" type="email" class="form-control form-control-sm" required />
+             </div>
+             <div class="form-group">
+               <label class="form-label">Rol</label>
+               <select v-model="currentUser.role" class="form-select form-control-sm" required>
+                 <option value="">Seleccione rol</option>
+                 <option value="admin">Admin</option>
+                 <option value="operative">Operative</option>
+                 <option value="Inventario">Inventario</option>
+               </select>
+             </div>
+             <div class="form-group">
+               <label class="form-label">Negocio</label>
+               <div class="searchable-select">
+                 <input 
+                   v-model="businessSearchQuery" 
+                   type="text" 
+                   class="form-control form-control-sm" 
+                   placeholder="Buscar negocio..."
+                   @input="filterBusinesses"
+                   @focus="showBusinessDropdown = true"
+                   @blur="setTimeout(() => showBusinessDropdown = false, 200)"
+                 />
+                 <div v-if="showBusinessDropdown && filteredBusinesses.length > 0" class="dropdown-options">
+                   <div 
+                     v-for="business in filteredBusinesses" 
+                     :key="business.id"
+                     class="dropdown-option"
+                     @click="selectBusiness(business)"
+                     :class="{ 'selected': currentUser.businessId === business.id }"
+                   >
+                     {{ business.name }}
+                   </div>
+                 </div>
+                 <div v-if="currentUser.businessId && selectedBusinessName" class="selected-business">
+                   <small class="text-muted">Seleccionado: {{ selectedBusinessName }}</small>
+                 </div>
+               </div>
+               
+               <!-- Select adicional para mostrar todas las opciones -->
+               <div class="mt-2">
+                 <select 
+                   v-model="currentUser.businessId" 
+                   class="form-select form-control-sm" 
+                   @change="onBusinessSelectChange"
+                   required
+                 >
+                   <option value="">Seleccione un negocio</option>
+                   <option v-for="business in businesses" :key="business.id" :value="business.id">
+                     {{ business.name }}
+                   </option>
+                 </select>
+               </div>
+             </div>
+             
+             <div class="sidebar-footer">
+               <div class="button-group">
+                 <button type="button" class="btn btn-outline-secondary btn-sm" @click="closeEditUserModal">
+                   <i class="fas fa-times me-1"></i>Cancelar
+                 </button>
+                 <button type="submit" class="btn btn-primary btn-sm">
+                   <i class="fas fa-save me-1"></i>Guardar Cambios
+                 </button>
+               </div>
+             </div>
+           </form>
+         </div>
+       </div>
+       
+       <!-- Modal Crear Usuario -->
       <div v-if="showCreateUserModal" class="modal d-block" tabindex="-1">
         <div class="modal-dialog">
           <div class="modal-content">
@@ -318,8 +409,13 @@
                   </select>
                 </div>
                 <div class="mb-3">
-                  <label class="form-label">ID del Negocio</label>
-                  <input v-model="newUser.businessId" type="text" class="form-control" required />
+                  <label class="form-label">Negocio</label>
+                  <select v-model="newUser.businessId" class="form-select" required>
+                    <option value="">Seleccione un negocio</option>
+                    <option v-for="business in businesses" :key="business.id" :value="business.id">
+                      {{ business.name }}
+                    </option>
+                  </select>
                 </div>
               </div>
               <div class="modal-footer">
@@ -331,42 +427,7 @@
         </div>
       </div>
       
-      <!-- Modal Editar Usuario -->
-      <div v-if="showEditUserModal" class="modal d-block" tabindex="-1">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <form @submit.prevent="updateUser">
-              <div class="modal-header">
-                <h5 class="modal-title">Editar Usuario</h5>
-                <button type="button" class="btn-close" @click="closeEditUserModal"></button>
-              </div>
-              <div class="modal-body">
-                <div class="mb-3">
-                  <label class="form-label">Email</label>
-                  <input v-model="currentUser.email" type="email" class="form-control" required />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Rol</label>
-                  <select v-model="currentUser.role" class="form-select" required>
-                    <option value="">Seleccione rol</option>
-                    <option value="admin">Admin</option>
-                    <option value="operative">Operative</option>
-                    <option value="Inventario">Inventario</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">ID del Negocio</label>
-                  <input v-model="currentUser.businessId" type="text" class="form-control" required />
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" @click="closeEditUserModal">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
+      
       
       <!-- Modal confirmación de eliminación (Usuarios) -->
       <div v-if="showUserDeleteConfirmModal" class="modal d-block" tabindex="-1">
@@ -468,10 +529,61 @@
           <button type="button" class="btn btn-secondary ms-2" v-if="ownerEditMode" @click="cancelOwnerEdit">
             Cancelar
           </button>
-        </form>
-      </div>
-    
-    <!-- Overlay de Loader -->
+                 </form>
+       </div>
+
+               <!-- Sidebar para asignar negocio a propietario -->
+        <div v-if="showAssignBusinessModal" class="sidebar-overlay" :class="{ 'overlay-closing': isClosingSidebar }" @click="closeAssignBusinessModal"></div>
+        <div v-if="showAssignBusinessModal" class="assign-business-sidebar" :class="{ 'sidebar-closing': isClosingSidebar }">
+         <div class="sidebar-header">
+           <h5 class="sidebar-title">Asignar Negocio a Propietario</h5>
+           <button type="button" class="btn-close" @click="closeAssignBusinessModal"></button>
+         </div>
+         <div class="sidebar-body">
+           <!-- Información del propietario -->
+           <div v-if="selectedOwner" class="owner-info mb-4">
+             <h6 class="text-primary mb-3">Información del Propietario</h6>
+             <div class="card">
+               <div class="card-body">
+                 <div class="row">
+                   <div class="col-12">
+                     <p class="mb-2"><strong>Nombre:</strong> {{ selectedOwner.name }}</p>
+                     <p class="mb-2"><strong>Email:</strong> {{ selectedOwner.email }}</p>
+                     <p class="mb-0"><strong>Negocios actuales:</strong></p>
+                     <ul class="list-unstyled ms-3 mt-1">
+                       <li v-for="business in getBusinessesByOwner(selectedOwner.id)" :key="business.id" class="text-muted">
+                         • {{ business.name }}
+                       </li>
+                       <li v-if="getBusinessesByOwner(selectedOwner.id).length === 0" class="text-muted">
+                         • No tiene negocios asignados
+                       </li>
+                     </ul>
+                   </div>
+                 </div>
+               </div>
+             </div>
+           </div>
+           
+           <div class="mb-3">
+             <label class="form-label">Seleccionar Negocio</label>
+             <select v-model="selectedBusinessId" class="form-select" required>
+               <option value="">Seleccione un negocio</option>
+               <option v-for="business in availableBusinesses" :key="business.id" :value="business.id">
+                 {{ business.name }}
+               </option>
+             </select>
+             <small class="form-text text-muted">
+               Solo se muestran negocios que no están asignados a ningún propietario
+             </small>
+           </div>
+         </div>
+         <div class="sidebar-footer">
+           <button type="button" class="btn btn-secondary" @click="closeAssignBusinessModal">Cancelar</button>
+           <button type="button" class="btn btn-primary" @click="confirmAssignBusiness">Asignar Negocio</button>
+         </div>
+       </div>
+     
+     <!-- Overlay de Loader -->
     <div v-if="isLoading" class="overlay">
       <div class="spinner-border text-light" role="status">
         <span class="visually-hidden">Cargando...</span>
@@ -525,9 +637,10 @@ export default {
     // Valor seleccionado (por defecto, por ejemplo, el primero)
     const selectedOption = ref(options[0])
     
-    // Variables y modales para negocios
-    const showEditModal = ref(false)
-    const showCreateModal = ref(false)
+         // Variables y modales para negocios
+     const showEditModal = ref(false)
+     const isClosingSidebar = ref(false)
+     const showCreateModal = ref(false)
     const showDeleteConfirmModal = ref(false)
     const showFinalDeleteModal = ref(false)
     const currentBusiness = ref(null)
@@ -608,10 +721,14 @@ export default {
       businessKey.value = business.id  // Asumiendo que business.id es único
       showEditModal.value = true
     }
-    const closeEditModal = () => {
-      showEditModal.value = false
-      currentBusiness.value = null
-    }
+         const closeEditModal = () => {
+       isClosingSidebar.value = true
+       setTimeout(() => {
+         showEditModal.value = false
+         currentBusiness.value = null
+         isClosingSidebar.value = false
+       }, 300) // Duración de la animación
+     }
     
     const openCreateModal = () => {
       newBusiness.value = {
@@ -742,10 +859,14 @@ export default {
     const filteredAndSortedUsers = computed(() => {
       const q = userSearchQuery.value.toLowerCase();
       let filtered = users.value.filter(u => {
+        const businessFound = businesses.value.find(b => b.id === u.businessId);
+        const businessName = businessFound ? businessFound.name.toLowerCase() : '';
+        
         return (
           ((u.email || '').toLowerCase().includes(q)) ||
           ((u.role || '').toLowerCase().includes(q)) ||
-          ((u.businessId || '').toLowerCase().includes(q))
+          ((u.businessId || '').toLowerCase().includes(q)) ||
+          businessName.includes(q)
         );
       });
       return filtered.sort((a, b) => {
@@ -792,16 +913,59 @@ export default {
       showCreateUserModal.value = false
     }
     
-    const showEditUserModal = ref(false)
-    const currentUser = ref(null)
-    const openEditUserModal = (user) => {
-      currentUser.value = { ...user }
-      showEditUserModal.value = true
-    }
-    const closeEditUserModal = () => {
-      showEditUserModal.value = false
-      currentUser.value = null
-    }
+         const showEditUserModal = ref(false)
+     const isClosingUserSidebar = ref(false)
+     const currentUser = ref(null)
+     
+     // Variables para el select searchable de negocios
+     const businessSearchQuery = ref('')
+     const showBusinessDropdown = ref(false)
+     const filteredBusinesses = ref([])
+     const selectedBusinessName = ref('')
+         const openEditUserModal = (user) => {
+       currentUser.value = { ...user }
+       showEditUserModal.value = true
+       // Inicializar el nombre del negocio seleccionado
+       if (user.businessId) {
+         const business = businesses.value.find(b => b.id === user.businessId)
+         selectedBusinessName.value = business ? business.name : ''
+       }
+     }
+     
+     const filterBusinesses = () => {
+       const query = businessSearchQuery.value.toLowerCase()
+       filteredBusinesses.value = businesses.value.filter(business => 
+         business.name.toLowerCase().includes(query)
+       )
+     }
+     
+     const selectBusiness = (business) => {
+       currentUser.value.businessId = business.id
+       selectedBusinessName.value = business.name
+       businessSearchQuery.value = business.name
+       showBusinessDropdown.value = false
+     }
+     
+     const onBusinessSelectChange = () => {
+       if (currentUser.value.businessId) {
+         const business = businesses.value.find(b => b.id === currentUser.value.businessId)
+         if (business) {
+           selectedBusinessName.value = business.name
+           businessSearchQuery.value = business.name
+         }
+       } else {
+         selectedBusinessName.value = ''
+         businessSearchQuery.value = ''
+       }
+     }
+         const closeEditUserModal = () => {
+       isClosingUserSidebar.value = true
+       setTimeout(() => {
+         showEditUserModal.value = false
+         currentUser.value = null
+         isClosingUserSidebar.value = false
+       }, 300) // Duración de la animación
+     }
     
     const updateUser = async () => {
       if (!currentUser.value || !currentUser.value.id) return
@@ -954,13 +1118,56 @@ export default {
       return businesses.value.filter(b => b.ownerId === ownerId)
     }
 
-    // Asignar un negocio a un propietario: se solicita el ID del negocio a vincular.
-    const assignBusinessToOwner = async (ownerId) => {
-      const businessId = prompt("Ingrese el ID del negocio a asignar:");
-      if (businessId) {
-        await updateDoc(doc(db, 'businesses', businessId), { ownerId: ownerId })
+    // Computed para obtener solo los negocios disponibles (no asignados a ningún propietario)
+    const availableBusinesses = computed(() => {
+      return businesses.value.filter(business => !business.ownerId || business.ownerId === '')
+    })
+
+    // Computed para obtener los datos del propietario seleccionado
+    const selectedOwner = computed(() => {
+      return owners.value.find(owner => owner.id === selectedOwnerId.value) || null
+    })
+
+    // Variables para el modal de asignar negocio
+    const showAssignBusinessModal = ref(false)
+    const selectedOwnerId = ref('')
+    const selectedBusinessId = ref('')
+
+    // Asignar un negocio a un propietario usando modal
+    const assignBusinessToOwner = (ownerId) => {
+      selectedOwnerId.value = ownerId
+      selectedBusinessId.value = ''
+      showAssignBusinessModal.value = true
+    }
+
+    const closeAssignBusinessModal = () => {
+      isClosingSidebar.value = true
+      
+      // Esperar a que termine la animación antes de ocultar el sidebar
+      setTimeout(() => {
+        showAssignBusinessModal.value = false
+        isClosingSidebar.value = false
+        selectedOwnerId.value = ''
+        selectedBusinessId.value = ''
+      }, 300) // 300ms = duración de la animación slideOut
+    }
+
+    const confirmAssignBusiness = async () => {
+      if (!selectedBusinessId.value) {
+        message.value = 'Por favor seleccione un negocio'
+        return
+      }
+      
+      try {
+        isLoading.value = true
+        await updateDoc(doc(db, 'businesses', selectedBusinessId.value), { ownerId: selectedOwnerId.value })
         await fetchBusinesses()
-        alert("Negocio asignado al propietario")
+        message.value = 'Negocio asignado al propietario correctamente'
+        closeAssignBusinessModal()
+      } catch (error) {
+        message.value = `Error al asignar negocio: ${error.message}`
+      } finally {
+        isLoading.value = false
       }
     }
 
@@ -1023,11 +1230,18 @@ export default {
       closeCreateUserModal,
       newUser,
       createUser,
-      showEditUserModal,
-      currentUser,
-      openEditUserModal,
-      closeEditUserModal,
-      updateUser,
+             showEditUserModal,
+       currentUser,
+       openEditUserModal,
+       closeEditUserModal,
+       updateUser,
+       businessSearchQuery,
+       showBusinessDropdown,
+       filteredBusinesses,
+       selectedBusinessName,
+       filterBusinesses,
+       onBusinessSelectChange,
+       selectBusiness,
       showUserDeleteConfirmModal,
       confirmUserDeletion,
       closeUserDeleteModal,
@@ -1037,9 +1251,11 @@ export default {
       userDeleteConfirmation,
       finalUserDelete,
       formatTimestampUser,
-      showCreateModal,
-      showEditModal,
-      enrichedUsers,
+             showCreateModal,
+       showEditModal,
+       isClosingSidebar,
+       isClosingUserSidebar,
+       enrichedUsers,
       owners,
       ownerForm,
       ownerEditMode,
@@ -1047,14 +1263,22 @@ export default {
       saveOwner,
       editOwner,
       cancelOwnerEdit,
-      getBusinessesByOwner,
-      assignBusinessToOwner,
-      unassignBusiness,
-      fetchOwners,
-      setActiveTab: (tab) => { activeTab.value = tab },
-      userToDelete,
-      options,
-      selectedOption,
+             getBusinessesByOwner,
+       assignBusinessToOwner,
+       unassignBusiness,
+       fetchOwners,
+       setActiveTab: (tab) => { activeTab.value = tab },
+       userToDelete,
+       options,
+       selectedOption,
+       // Modal asignar negocio
+       showAssignBusinessModal,
+       selectedBusinessId,
+       closeAssignBusinessModal,
+               confirmAssignBusiness,
+        availableBusinesses,
+        selectedOwner,
+        isClosingSidebar,
     }
   }
 }
@@ -1075,5 +1299,383 @@ th {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1040;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.edit-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 450px;
+  height: 100vh;
+  background-color: white;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.sidebar-closing {
+  animation: slideOut 0.3s ease-out forwards;
+}
+
+.overlay-closing {
+  animation: fadeOut 0.3s ease-out forwards;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+  flex-shrink: 0;
+}
+
+.sidebar-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.sidebar-body {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+  flex-shrink: 0;
+}
+
+.button-group {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.button-group .btn {
+  min-width: 120px;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.button-group .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.button-group .btn:active {
+  transform: translateY(0);
+}
+
+/* Estilos para formulario compacto */
+.form-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.form-group {
+  flex: 1;
+  margin-bottom: 0.5rem;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  color: #495057;
+}
+
+.form-control-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.2rem;
+  border: 1px solid #ced4da;
+}
+
+.form-control-sm:focus {
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+textarea.form-control-sm {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.2rem;
+}
+
+/* Ajustar el contenedor principal cuando el sidebar está abierto */
+.container {
+  transition: margin-right 0.3s ease-out;
+}
+
+.container.sidebar-open {
+  margin-right: 450px;
+}
+
+/* Estilos específicos para el sidebar de usuarios */
+.edit-sidebar .form-select.form-control-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+  border: 1px solid #ced4da;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  background-color: #f8f9fa;
+}
+
+.edit-sidebar .form-select.form-control-sm:focus {
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  background-color: #fff;
+}
+
+.edit-sidebar .form-select.form-control-sm:hover {
+  border-color: #adb5bd;
+}
+
+/* Estilos para el select searchable */
+.searchable-select {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.searchable-select .form-control {
+  border-radius: 0.375rem;
+  border: 1px solid #ced4da;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.searchable-select .form-control:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.dropdown-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ced4da;
+  border-top: none;
+  border-radius: 0 0 0.375rem 0.375rem;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  animation: fadeInDown 0.2s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-option {
+  padding: 0.625rem 0.75rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f8f9fa;
+  font-size: 0.875rem;
+  transition: all 0.15s ease-in-out;
+  display: flex;
+  align-items: center;
+}
+
+.dropdown-option:hover {
+  background-color: #f8f9fa;
+  transform: translateX(2px);
+}
+
+.dropdown-option.selected {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  font-weight: 500;
+}
+
+.dropdown-option.selected::before {
+  content: "✓";
+  margin-right: 0.5rem;
+  font-weight: bold;
+}
+
+.dropdown-option:last-child {
+  border-bottom: none;
+}
+
+.selected-business {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #e8f5e8;
+  border: 1px solid #c3e6c3;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.selected-business small {
+  color: #2d5a2d !important;
+  font-weight: 500;
+}
+
+/* Responsive para pantallas pequeñas */
+@media (max-width: 768px) {
+  .edit-sidebar {
+    width: 100%;
+  }
+  
+  .container.sidebar-open {
+    margin-right: 0;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+}
+
+/* Estilos para el sidebar de asignar negocio */
+.assign-business-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 450px;
+  height: 100vh;
+  background-color: white;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.3s ease-out;
+}
+
+.sidebar-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f8f9fa;
+}
+
+.sidebar-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #212529;
+}
+
+.sidebar-body {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.sidebar-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+@media (max-width: 768px) {
+  .assign-business-sidebar {
+    width: 100%;
+  }
+}
+
+/* Estilos para la información del propietario */
+.owner-info .card {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.owner-info .card-body {
+  padding: 1rem;
+}
+
+.owner-info h6 {
+  font-weight: 600;
+  color: #495057;
+}
+
+.owner-info p {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.owner-info ul li {
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
 }
 </style>
