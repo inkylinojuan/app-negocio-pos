@@ -211,6 +211,7 @@
     } from 'firebase/firestore'
   import MenuInventario from '../../components/MenuInventario.vue'
   import QRCode from 'qrcode'
+  import { getFunctions, httpsCallable } from 'firebase/functions';
   
   export default {
     name: 'PrestamoActivosAsignados',
@@ -241,6 +242,12 @@
       const categoriesCol = collection(db, 'businesses', businessId, "loanCategories") // Nueva colección para categorías
       const ubicaciones = ref([]) // Renombrado de bodegas
       const categories = ref([]) // Nuevo ref para categorías
+      const functions = getFunctions()
+      const createShortUrlFn = httpsCallable(functions, 'createShortUrl')
+        // antes de construir html3, define las URLs de tus logos y el ancho en mm
+      const leftLogoUrl  = 'https://evtica.com/Logo_ClaseAlpha.jpg'
+      const rightLogoUrl = 'https://evtica.com/Logo_ClaseAlpha.jpg'
+      const logoWidth    = 10      // ancho de cada logo en mm
       
       // Carga inicial de datos
       onMounted(() => {
@@ -318,12 +325,22 @@
            alert('Este registro no tiene un RFID asignado.')
            return
          }
-         // URL base + query
-         const base = window.location.origin
-         const url = `${base}/inventario/verActivo?tag=${tagId}`
+        const qrMm     = 10;
+        const base = window.location.origin
+        const qrUrl = `${base}/inventario/verActivo?tag=${tagId}`;
+        let urlToEncode = qrUrl;
+          try {
+            const { data } = await createShortUrlFn({ longUrl: qrUrl });
+            urlToEncode = data.shortUrl || data;
+          } catch {
+            // X falla → usamos la larga
+          }
          try {
-           // Data URL del QR
-           const qrDataUrl = await QRCode.toDataURL(url, { margin: 1 })
+           console.log("url to encode", urlToEncode)
+            const qrDataUrl = await QRCode.toDataURL(urlToEncode, {
+              margin: 0,
+              errorCorrectionLevel: 'L'
+            });
    
            // HTML para imprimir
            const html = `
@@ -348,8 +365,7 @@
                     display: inline-block;
                     vertical-align: top;  /* <<< Alinea al tope */
                     box-sizing: border-box;
-                    width: 40mm;
-                    height: 29.5mm;
+                    margin-top: 2px;
                     text-align: left;
                     font-family: sans-serif;
                   }
@@ -357,9 +373,9 @@
                   .label + .label { margin-left: 0mm; }
   
                   .qr {
-                    width: 26mm;
-                    height: 26mm;
-                    margin: 0mm 0 0 6mm;
+                    width: 14mm;
+                    height: 14mm;
+                    margin: 0mm 0 0 2mm;
                   }
                   .info {
                     margin: 1.5mm;
@@ -369,10 +385,11 @@
                 </style>
               </head>
               <body>
+                
                 <div class="label">
+                  <div class="label">
                   <img src="${qrDataUrl}" class="qr"/>
                 </div>
-                <div class="label">
                   <div class="info">
                     <div><strong>Tag:</strong> ${tagId}</div>
                     <div><strong>Nombre:</strong> ${tagData.activo.nombre}</div>
@@ -384,9 +401,75 @@
               </body>
             </html>
             `;
+          
+        const html3 = `
+          <html>
+            <head>
+              <style>
+                @media print {
+                  @page { size: 44mm 29.5mm; margin: 0 }
+                  html, body { margin:0; padding:0; }
+                  .label { page-break-inside: avoid; }
+                }
+
+                .label {
+                  display: flex;
+                  width: 44mm;
+                  height: 29.5mm;
+                  box-sizing: border-box;
+                  font-family: sans-serif;
+                }
+
+                /* Ahora la columna QR incluye ambos logos y el QR en medio */
+                .qr-col {
+                  flex: 0 0 ${qrMm + 2 + logoWidth * 2}mm; /* qrMm + 2mm margen + logos */
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                }
+                .qr-col .logo {
+                  width: ${logoWidth}mm;
+                  height: auto;
+                }
+                .qr-col img.qr {
+                  width: ${qrMm}mm;
+                  height: ${qrMm}mm;
+                }
+
+                .info-col {
+                  flex: 1;
+                  margin-left: 3mm;
+                  font-size: 8pt;
+                  line-height: 0.9;
+                }
+                .info-col div { margin-bottom: 0.5mm; }
+                .info-col strong { display: inline-block; }
+              </style>
+            </head>
+            <body>
+              <div class="label">
+                <div class="info-col">
+                  <div class="qr-col">
+                    <!-- logo izq -->
+                    <img src="${leftLogoUrl}"  class="logo" alt="Logo Izq"/>
+                    <!-- QR -->
+                    <img src="${qrDataUrl}"    class="qr"   alt="QR"/>
+                    <!-- logo der -->
+                    <img src="${rightLogoUrl}" class="logo" alt="Logo Der"/>
+                  </div><br>
+                    <div><strong>Tag:</strong> ${tagId}</div>
+                    <div><strong>Nombre:</strong> ${tagData.activo.nombre}</div>
+                    <div><strong>Código:</strong> ${tagData.activo.codigoInterno}</div>
+                    <div><strong>Ubicación:</strong> ${tagData.activo.ubicacion?.name || '–'}</div>
+                    <div><strong>Categoria:</strong> ${tagData.activo.category?.name || '–'}</div>
+                </div>
+              </div>
+            </body>
+          </html>
+          `;
   
           const win = window.open('', '_blank')
-          win.document.write(html)
+          win.document.write(html3)
           win.document.close()
           win.focus()
           setTimeout(() => win.print(), 300)
@@ -529,9 +612,22 @@
         let labelsHtml = '';
         for (const tag of displayedTags.value) {
             const tagId = tag.id;
+            const qrUrl = `${base}/inventario/verActivo?tag=${tagId}`;
+            let urlToEncode = qrUrl;
+              try {
+                const { data } = await createShortUrlFn({ longUrl: qrUrl });
+                urlToEncode = data.shortUrl || data;
+              } catch {
+                // X falla → usamos la larga
+              }
+
             // Generar QR
             // eslint-disable-next-line no-await-in-loop
-            const qrDataUrl = await QRCode.toDataURL(`${base}/inventario/verActivo?tag=${tagId}`, { margin: 1 });
+            console.log("url to encode", urlToEncode)
+            const qrDataUrl = await QRCode.toDataURL(urlToEncode, {
+              margin: 0,
+              errorCorrectionLevel: 'L'
+            });
             // Construir dos etiquetas por tag
             labelsHtml += `
             <div class="label">
@@ -556,10 +652,10 @@
                 @media print {
                 @page { size: 88mm 29.5mm; margin: 0; }
                 html, body { margin:0; padding:0; width:88mm; height:100%; }
-                .label { page-break-inside: avoid; display:inline-block; vertical-align:top; box-sizing:border-box; width:40mm; height:29.5mm; text-align:left; font-family:sans-serif; }
+                .label { page-break-inside: avoid; display:inline-block; vertical-align:top; box-sizing:border-box; height:29.5mm; text-align:left; font-family:sans-serif; }
                 .label + .label { margin-left:0mm; }
                 }
-                .qr { width:26mm; height:26mm; margin:0 0 0 6mm; }
+                .qr { width:14mm; height:14mm; margin:0 0 0 2mm; }
                 .info { margin:1.5mm; font-size:8pt; line-height:1.2; }
             </style>
             </head>

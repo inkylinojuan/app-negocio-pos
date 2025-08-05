@@ -82,16 +82,20 @@
                 </select>
             </div>
 
-            <!-- Importar activos por CSV -->
-            <div class="mb-3">
-                <label class="form-label">Importar activos (CSV)</label>
-                <input 
-                type="file" 
-                @change="handleFileUpload" 
-                accept=".csv, application/vnd.ms-excel" 
+            <div class="mb-3 d-flex align-items-center">
+              <button
+                class="btn btn-outline-secondary me-3"
+                @click="downloadTemplate"
+              >
+                Descargar Plantilla CSV
+              </button>
+              <input
+                type="file"
+                @change="handleFileUpload"
+                accept=".csv, application/vnd.ms-excel"
                 class="form-control"
-                :disabled="!selectedUbicacionBulk || !selectedCategoryBulk"
-                />
+              />
+              <!--:disabled="!selectedUbicacionBulk || !selectedCategoryBulk"-->
             </div>
           
           <!-- Botón para agregar un activo individual -->
@@ -381,17 +385,21 @@
           }
         }
   
-        const fetchCategories = async () => { // Nueva función para cargar categorías
+        const fetchCategories = async () => {
           try {
             const snap = await getDocs(categoriesCol)
+            // 1) Mapear documentos
             categories.value = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-            console.log("Categorías cargadas:", categories.value)
+            // 2) Ordenar por name (ascendente)
+            categories.value.sort((a, b) =>
+              a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+            )
           } catch (error) {
             console.error("Error al cargar categorías:", error)
             openCustomModal('Error', 'Error al cargar las categorías: ' + error.message)
           }
         }
-        
+
         onMounted(() => {
           fetchActivos()
           fetchUbicaciones()
@@ -500,9 +508,9 @@
           return activos.value.filter(a =>
             a.nombre.toLowerCase().includes(query) ||
             (a.codigoInterno && a.codigoInterno.toLowerCase().includes(query)) ||
-            (a.descripcion && a.descripcion.toLowerCase().includes(query)) ||
-            (a.ubicacion && a.ubicacion.nombre.toLowerCase().includes(query)) ||
-            (a.category && a.category.nombre.toLowerCase().includes(query))
+            (a.descripcion && a.descripcion.toLowerCase().includes(query)) //||
+            //(a.ubicacion && a.ubicacion.nombre.toLowerCase().includes(query)) ||
+            //(a.category && a.category.nombre.toLowerCase().includes(query))
           )
         })
         
@@ -595,64 +603,83 @@
         }
         
         // Importación de CSV
-        const handleFileUpload = (event) => {
-            if (!selectedUbicacionBulk.value || !selectedCategoryBulk.value) {
-                openCustomModal('Error', 'Debe seleccionar una ubicación y categoría antes de importar');
-                return;
-            }
+const handleFileUpload = (event) => {
+  //if (!selectedUbicacionBulk.value || !selectedCategoryBulk.value) {
+  //  openCustomModal('Error', 'Debe seleccionar una ubicación y categoría antes de importar');
+  //  return;
+  //}
 
-            const file = event.target.files[0];
-            if (file) {
-                Papa.parse(file, {
-                header: true,
-                skipEmptyLines: true,
-                complete: async function(results) {
-                    const parsedData = results.data;
-                    let importCount = 0;
-                    let errorCount = 0;
-                    
-                    for (const row of parsedData) {
-                    try {
-                        // Validar campos mínimos
-                        if (!row.nombre) {
-                        errorCount++;
-                        continue;
-                        }
-                        
-                        await addDoc(activosCol, {
-                        nombre: row.nombre || '',
-                        codigoInterno: row.codigoInterno || '',
-                        descripcion: row.descripcion || '',
-                        ubicacion: selectedUbicacionBulk.value,
-                        category: selectedCategoryBulk.value,
-                        createdAt: serverTimestamp()
-                        });
-                        importCount++;
-                    } catch (error) {
-                        console.error("Error al importar activo:", error);
-                        errorCount++;
-                    }
-                    }
-                    
-                    await fetchActivos();
-                    
-                    // Resetear selecciones
-                    selectedUbicacionBulk.value = null;
-                    selectedCategoryBulk.value = null;
-                    
-                    // Mostrar resumen
-                    openCustomModal(
-                    'Importación Completa',
-                    `Se importaron ${importCount} activos${errorCount > 0 ? ` (con ${errorCount} errores)` : ''}`
-                    );
-                },
-                error: function(error) {
-                    console.error("Error al parsear CSV:", error);
-                    openCustomModal('Error', 'Formato CSV inválido: ' + error.message);
-                }
-                });
-            }
-            };
+  const file = event.target.files[0];
+  if (!file) return;
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: async function(results) {
+      const parsedData = results.data;
+      let importCount = 0;
+      let errorCount = 0;
+
+      // 1) Consultar ambas colecciones UNA VEZ
+      let ubicList = [];
+      let categoryList = [];
+      try {
+        const ubicSnap = await getDocs(ubicacionesCol);
+        ubicList = ubicSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const catSnap = await getDocs(categoriesCol);
+        categoryList = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (fetchErr) {
+        console.error('Error cargando ubicaciones o categorías:', fetchErr);
+        openCustomModal('Error', 'No se pudieron cargar ubicaciones o categorías: ' + fetchErr.message);
+        return;
+      }
+
+      // 2) Procesar cada fila del CSV
+      for (const row of parsedData) {
+        try {
+          // Validar mínimo nombre
+          if (!row.nombre) {
+            errorCount++;
+            continue;
+          }
+
+          // Buscar el objeto completo por ID
+          const ubicObj = ubicList.find(u => u.id === row.ubicacionId) || null;
+          const catObj  = categoryList.find(c => c.id === row.categoryId) || null;
+
+          await addDoc(activosCol, {
+            nombre:        row.nombre,
+            codigoInterno: row.codigoInterno || '',
+            descripcion:   row.descripcion   || '',
+            ubicacion:     ubicObj,
+            category:      catObj,
+            createdAt:     serverTimestamp()
+          });
+          importCount++;
+        } catch (err) {
+          console.error('Error al importar activo:', err);
+          errorCount++;
+        }
+      }
+
+      // 3) Refrescar y limpiar
+      await fetchActivos();
+      selectedUbicacionBulk.value = null;
+      selectedCategoryBulk.value = null;
+
+      // 4) Mostrar resumen
+      openCustomModal(
+        'Importación Completa',
+        `Se importaron ${importCount} activos${errorCount > 0 ? ` (con ${errorCount} errores)` : ''}`
+      );
+    },
+    error: function(err) {
+      console.error("Error al parsear CSV:", err);
+      openCustomModal('Error', 'Formato CSV inválido: ' + err.message);
+    }
+  });
+};
+
         
         // Asignación en bloque: asigna la ubicación seleccionada a todos los activos sin ubicación
         const assignUbicacionBulk = async () => { // Renombrado de assignBodegaBulk
@@ -782,6 +809,42 @@
               openCustomModal('Error', "Error al crear activo: " + error.message)
           }
         }
+
+        const downloadTemplate = () => {
+          // 1) Encabezados y fila vacía
+          const headers = ['nombre','codigoInterno','descripcion','ubicacionId','categoryId']
+          const emptyRow = ['', '', '', '', '']
+          let csvLines = [
+            headers.join(','),
+            emptyRow.join(',')
+          ]
+
+          // 2) Separador visual y lista de ubicaciones
+          csvLines.push('')
+          csvLines.push('Ubicaciones (id,name)')
+          ubicaciones.value.forEach(u => {
+            csvLines.push(`${u.id},${u.name}`)
+          })
+
+          // 3) Separador y lista de categorías
+          csvLines.push('')
+          csvLines.push('Categorías (id,name)')
+          categories.value.forEach(c => {
+            csvLines.push(`${c.id},${c.name}`)
+          })
+
+          // 4) Montar Blob y forzar descarga
+          const csvContent = csvLines.join('\n')
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+          const url  = URL.createObjectURL(blob)
+          const a    = document.createElement('a')
+          a.href     = url
+          a.download = 'plantilla_activos.csv'
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+        }
   
         return {
           activeTab,
@@ -818,6 +881,7 @@
           customModalMessage,
           customModalType,
           closeCustomModal,
+          downloadTemplate,
           handleCustomModalAction
         }
       }
