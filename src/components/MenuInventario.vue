@@ -30,7 +30,7 @@
               role="button"
               data-bs-toggle="dropdown"
               aria-expanded="false"
-              @click.prevent="toggleDropdown('dropdownActivosFijos')" 
+             
             >
               Activos Fijos
             </a>

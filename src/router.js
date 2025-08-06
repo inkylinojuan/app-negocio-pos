@@ -257,7 +257,7 @@ const routes = [
   {
   path: '/fijos/listado',
   name: 'ListadoFijos',
-  component: () => import('./inventario/fijos/FijosCrearActivoView.vue'),
+  component: () => import('./components/MenuInventario.vue'),
   meta: { requiresAuth: true, role: 'Inventario' }
 },
  //
