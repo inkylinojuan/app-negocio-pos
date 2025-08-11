@@ -1,4 +1,5 @@
 <template>
+
   <!-- 1) Login “puro”: si estamos en /login, ni wrapper ni menú -->
   <router-view v-if="route.path === '/login' || route.path.startsWith('/manillas')" />
 

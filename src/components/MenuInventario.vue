@@ -30,8 +30,9 @@
               role="button"
               data-bs-toggle="dropdown"
               aria-expanded="false"
-             
+         
             >
+             <!-- en la linea de arriba se elimina un evento que impedia abrir la lista de opciones de activos fijos. -->
               Activos Fijos
             </a>
             <ul class="dropdown-menu" aria-labelledby="dropdownActivosFijos">

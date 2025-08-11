@@ -45,6 +45,15 @@ import Bodegas from './inventario/ManageBodegas.vue'
 import ManageActivos from './inventario/ManageActivos.vue'
 import RFIDReaderView from './inventario/RFIDReaderView.vue'
 
+
+// agregado por david --- imports de rutas de activos fijos ------
+
+// import FijosAsignarTagView from '@/inventario/fijos/FijosAsignarTagView.vue'
+// import FijosUbicacionesView from '@/inventario/fijos/FijosUbicacionesView.vue'
+// import FijosHistoricosView from '@/inventario/fijos/FijosHistoricosView.vue'
+
+
+
 const routes = [
   { path: '/', redirect: '/login' }, // Redirigir a la ruta de inicio
   { path: '/login', name: 'Login', component: Login },
@@ -251,19 +260,29 @@ const routes = [
     component: () => import('./inventario/fijos/FijosCrearActivoView.vue'),
     meta: { requiresAuth: true, role: 'Inventario' }
   },
-
-  //-----agregado por david 
-
+  //-----rutas agregadas por david --------------------------------------------------
   {
   path: '/fijos/listado',
   name: 'ListadoFijos',
-  component: () => import('./components/MenuInventario.vue'),
+  component: () => import('./inventario/fijos/ListadoActivosView.vue'),
   meta: { requiresAuth: true, role: 'Inventario' }
 },
- //
-
- 
-
+{
+  path: '/fijos/Asignar-tag',
+  name: 'Asignar-tag',
+  component: () => import('./inventario/fijos/FijosAsignarTagView.vue')
+},
+{
+  path: '/fijos/Ubicaciones',
+  name: 'Ubicaciones',
+  component: () => import('./inventario/fijos/FijosUbicacionesView.vue')
+},
+{
+  path: '/fijos/Historicos',
+  name: 'Historicos/Censos',
+  component: () => import('./inventario/fijos/FijosHistoricosView.vue')
+},
+ //----------------------------------------------------------------------------------
   {
     path: '/prestamo/categorias',
     name: 'PrestamoCategorias',
