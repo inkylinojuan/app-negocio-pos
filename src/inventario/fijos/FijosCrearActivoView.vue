@@ -33,8 +33,8 @@
       </div>
       <!-- Metadatos JSON opcional -->
       <div class="col-12">
-        <label class="form-label">Metadatos (JSON)</label>
-        <textarea v-model="asset.metadataJson" class="form-control" placeholder='{"marca":"XYZ","modelo":"ABC"}'
+        <label class="form-label">Descripcion Activo</label>
+        <textarea v-model="asset.metadataJson" class="form-control" placeholder='Escriba una breve descripción'
           rows="2"></textarea>
       </div>
       <!-- Botón guardar -->
@@ -88,7 +88,7 @@ export default {
           responsible: asset.value.responsible,
           tagId: null,
           status: 'disponible',
-          metadata: asset.value.metadataJson ? JSON.parse(asset.value.metadataJson) : {},
+          metadata: asset.value.metadataJson || '',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         };
