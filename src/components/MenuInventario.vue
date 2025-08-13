@@ -6,15 +6,8 @@
         <b>Inventario</b>
       </div>
       <!-- Botón responsive -->
-      <button
-        class="navbar-toggler"
-        type="button"
-        data-bs-toggle="collapse"
-        data-bs-target="#navbarSupportedContent"
-        aria-controls="navbarSupportedContent"
-        aria-expanded="false"
-        aria-label="Toggle navigation"
-      >
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
       <!-- Menú -->
@@ -23,19 +16,18 @@
 
           <!-- 1. Activos Fijos -->
           <li class="nav-item dropdown">
-            <a
-              class="nav-link dropdown-toggle"
-              href="#"
-              id="dropdownActivosFijos"
-              role="button"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-         
-            >
-             <!-- en la linea de arriba se elimina un evento que impedia abrir la lista de opciones de activos fijos. -->
+            <a class="nav-link dropdown-toggle" href="#" id="dropdownActivosFijos" role="button"
+              data-bs-toggle="dropdown" aria-expanded="false">
+              <!-- en la linea de arriba se elimina un evento que impedia abrir la lista de opciones de activos fijos. -->
               Activos Fijos
             </a>
             <ul class="dropdown-menu" aria-labelledby="dropdownActivosFijos">
+               <li> <!--agrego este li de "activos generales" -->
+                <router-link class="dropdown-item" to="/fijos/ActivosView" @click="closeMenu">
+                  Activos Generales
+                </router-link>
+              </li>
+
               <li>
                 <router-link class="dropdown-item" to="/fijos/listado" @click="closeMenu">
                   Listado de Activos
@@ -66,14 +58,8 @@
 
           <!-- 2. Activos en Préstamo / Alquiler -->
           <li class="nav-item dropdown">
-            <a
-              class="nav-link dropdown-toggle"
-              href="#"
-              id="dropdownPrestamo"
-              role="button"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-            >
+            <a class="nav-link dropdown-toggle" href="#" id="dropdownPrestamo" role="button" data-bs-toggle="dropdown"
+              aria-expanded="false">
               Préstamo / Alquiler
             </a>
             <ul class="dropdown-menu" aria-labelledby="dropdownPrestamo">
@@ -107,14 +93,8 @@
 
           <!-- 3. Inventario de Venta -->
           <li class="nav-item dropdown">
-            <a
-              class="nav-link dropdown-toggle"
-              href="#"
-              id="dropdownVenta"
-              role="button"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-            >
+            <a class="nav-link dropdown-toggle" href="#" id="dropdownVenta" role="button" data-bs-toggle="dropdown"
+              aria-expanded="false">
               Inventario Venta
             </a>
             <ul class="dropdown-menu" aria-labelledby="dropdownVenta">
@@ -148,14 +128,8 @@
 
           <!-- 4. Configuración (rutas de prueba) -->
           <li class="nav-item dropdown">
-            <a
-              class="nav-link dropdown-toggle"
-              href="#"
-              id="dropdownConfig"
-              role="button"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-            >
+            <a class="nav-link dropdown-toggle" href="#" id="dropdownConfig" role="button" data-bs-toggle="dropdown"
+              aria-expanded="false">
               Configuración
             </a>
             <ul class="dropdown-menu" aria-labelledby="dropdownConfig">
@@ -188,6 +162,10 @@
           </li>
 
         </ul>
+        <!-- agrego Botón de Logout -->
+        <button class="btn btn-outline-danger ms-auto" @click="logout">
+          Cerrar sesión
+        </button>
       </div>
     </div>
   </nav>
@@ -206,26 +184,26 @@ export default {
       // Inicializar todos los dropdowns
       this.dropdowns = {};
       const dropdownElements = this.$el.querySelectorAll('.dropdown-toggle');
-      
+
       dropdownElements.forEach(el => {
         const dropdownId = el.id;
         this.dropdowns[dropdownId] = new Dropdown(el);
       });
     },
-    
+
     toggleDropdown(dropdownId) {
       if (this.dropdowns[dropdownId]) {
         this.dropdowns[dropdownId].toggle();
       }
     },
-    
+
     closeMenu() {
       const navbar = this.$refs.navbarCollapse;
       if (navbar && navbar.classList.contains('show')) {
         const bsCollapse = new Collapse(navbar, { toggle: false });
         bsCollapse.hide();
       }
-      
+
       // Cerrar todos los dropdowns abiertos
       Object.values(this.dropdowns).forEach(dropdown => {
         const menu = dropdown._menu;
@@ -233,7 +211,12 @@ export default {
           dropdown.hide();
         }
       });
+    },
+    logout() {   //agrego esta funcion par el boton de logout
+      localStorage.removeItem('userRole'); // borra el rol
+      this.$router.push('/login'); // nos redirige al login
     }
+
   },
 };
 </script>

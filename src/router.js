@@ -262,6 +262,13 @@ const routes = [
   },
   //-----rutas agregadas por david --------------------------------------------------
   {
+  path: '/fijos/ActivosView',
+  name: 'ActivosGenerales',
+  component: () => import('./inventario/fijos/ActivosView.vue'),
+  meta: { requiresAuth: true, role: 'Inventario' }
+},
+
+  {
   path: '/fijos/listado',
   name: 'ListadoFijos',
   component: () => import('./inventario/fijos/ListadoActivosView.vue'),

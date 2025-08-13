@@ -1,7 +1,7 @@
 <template>
     <MenuInventario />
 <div>
-    <h1>Asignar Tag</h1>
+    <h1>lista activos</h1>
   </div>
 
 </template>
