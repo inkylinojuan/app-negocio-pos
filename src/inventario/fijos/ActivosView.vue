@@ -4,38 +4,40 @@
   <div class="container py-4">
     <!-- Barra de búsqueda y botón -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <input
-        v-model="search"
-        type="text"
-        class="form-control w-50"
-        placeholder="Buscar activo por nombre o serial..."
-      />
+      <input v-model="search" type="text" class="form-control w-50"
+        placeholder="Buscar activo por nombre o serial..." />
       <button class="btn btn-primary" @click="openModal()">Crear Activo</button>
     </div>
 
     <!-- Tabla de activos -->
     <table class="table table-striped">
       <thead>
-        <tr>
-          <th>Nombre Activo</th>
-          <th>Serial</th>
-          <th>Persona a Cargo</th>
-          <th>Bodega</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
+  <tr>
+    <th>Nombre Activo</th>
+    <th>Descripción</th>     <!-- nueva columna -->
+    <th>Serial</th>
+    <th>Persona a Cargo</th>
+    <th>Estado</th>
+    <th>Bodega</th>
+    <th>Acciones</th>
+  </tr>
+</thead>
+
       <tbody>
-        <tr v-for="asset in filteredAssets" :key="asset.id">
-          <td>{{ asset.name }}</td>
-          <td>{{ asset.serial }}</td>
-          <td>{{ asset.responsible || 'Sin asignar' }}</td>
-          <td>{{ asset.locationName || 'Sin asignar' }}</td>
-          <td>
-            <button class="btn btn-warning btn-sm me-2" @click="openModal(asset)">Editar</button>
-            <button class="btn btn-danger btn-sm" @click="deleteAsset(asset.id)">Eliminar</button>
-          </td>
-        </tr>
-      </tbody>
+  <tr v-for="asset in filteredAssets" :key="asset.id">
+    <td>{{ asset.name }}</td>
+    <td>{{ asset.description || '—' }}</td>
+    <td>{{ asset.serial }}</td>
+    <td>{{ asset.responsible || 'Sin asignar' }}</td>
+    <td>{{ asset.status || 'Sin estado' }}</td>
+    <td>{{ asset.locationName || 'Sin asignar' }}</td>
+    <td>
+      <button class="btn btn-warning btn-sm me-2" @click="openModal(asset)">Editar</button>
+      <button class="btn btn-danger btn-sm" @click="deleteAsset(asset.id)">Eliminar</button>
+    </td>
+  </tr>
+</tbody>
+
     </table>
   </div>
 
@@ -45,35 +47,44 @@
       <h4>{{ editMode ? 'Editar Activo' : 'Crear Activo' }}</h4>
       <form @submit.prevent="saveAsset">
         <div class="mb-3">
-          <label class="form-label">tipo Activo</label>
-          <input v-model="asset.name" type="text" class="form-control" required />
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Descripción</label>
-          <input v-model="asset.description" type="text" class="form-control" />
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Serial</label>
-          <input v-model="asset.serial" type="text" class="form-control" requiredgit status />
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Bodega</label>
-          <select v-model="asset.locationId" class="form-select">
-            <option value="">Bodega Envigado</option>
-            <option v-for="loc in locations" :key="loc.id" :value="loc.id">
-              {{ loc.name }}
-            </option>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Responsable</label>
-          <input v-model="asset.responsible" type="text" class="form-control" />
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Descripción Activo</label>
-          <textarea v-model="asset.metadataJson" class="form-control" rows="2"></textarea>
-        </div>
+    <label class="form-label">Tipo Activo</label>
+    <input v-model="asset.name" type="text" class="form-control" required />
+  </div>
 
+  <div class="mb-3">
+    <label class="form-label">Descripción</label>
+    <textarea v-model="asset.description" class="form-control" rows="2"></textarea>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Serial</label>
+    <input v-model="asset.serial" type="text" class="form-control" required :readonly="editMode" />
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Bodega</label>
+    <select v-model="asset.locationId" class="form-select">
+      <option value="">Bodega Envigado</option>
+      <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Responsable</label>
+    <input v-model="asset.responsible" type="text" class="form-control" />
+  </div>
+
+  <!-- Campo Estado -->
+  <div class="mb-3">
+    <label class="form-label">Estado</label>
+    <select v-model="asset.status" class="form-control" required>
+      <option value="" disabled>Seleccione un estado</option>
+      <option value="asignado">Asignado</option>
+      <option value="sin asignar">Sin asignar</option>
+      <option value="malo">Malo</option>
+      <option value="en mantenimiento">En mantenimiento</option>
+    </select>
+  </div>
         <div class="text-end">
           <button type="button" class="btn btn-secondary me-2" @click="closeModal">Cancelar</button>
           <button type="submit" class="btn btn-success">{{ editMode ? 'Actualizar' : 'Guardar' }}</button>
@@ -81,6 +92,7 @@
       </form>
     </div>
   </div>
+
 </template>
 
 <script>
@@ -100,11 +112,13 @@ export default {
     const assets = ref([]);
     const locations = ref([]);
 
+    // 🔹 CAMBIO: Traemos las ubicaciones
     const fetchLocations = async () => {
       const snapshot = await getDocs(collection(db, "locations"));
       locations.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     };
 
+    // 🔹 CAMBIO: Traemos los activos y asignamos el nombre de la ubicación
     const fetchAssets = async () => {
       const snapshot = await getDocs(collection(db, "assets"));
       assets.value = snapshot.docs.map(docSnap => {
@@ -117,12 +131,27 @@ export default {
       });
     };
 
+    // 🔹 CAMBIO: openModal ahora asegura que status y metadataJson siempre estén definidos
     const openModal = (item = null) => {
       if (item) {
-        asset.value = { ...item, metadataJson: item.metadata || "" };
+        // Modo editar
+        asset.value = { 
+          ...item, 
+          metadataJson: item.metadata || "", 
+          status: item.status || "" 
+        };
         editMode.value = true;
       } else {
-        asset.value = { name: "", description: "", serial: "", locationId: "", responsible: "", metadataJson: "" };
+        // Modo crear
+        asset.value = { 
+          name: "", 
+          description: "", 
+          serial: "", 
+          locationId: "", 
+          responsible: "", 
+          status: "", // vacío para forzar selección en modal
+          metadataJson: "" 
+        };
         editMode.value = false;
       }
       showModal.value = true;
@@ -132,6 +161,7 @@ export default {
       showModal.value = false;
     };
 
+    // 🔹 CAMBIO: saveAsset ahora guarda status según lo elegido y no lo fija a "disponible" siempre
     const saveAsset = async () => {
       try {
         if (editMode.value) {
@@ -144,7 +174,6 @@ export default {
           await addDoc(collection(db, "assets"), {
             ...asset.value,
             type: "fijo",
-            status: "disponible",
             metadata: asset.value.metadataJson,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
@@ -193,6 +222,7 @@ export default {
 };
 </script>
 
+
 <style scoped>
 .modal-backdrop {
   position: fixed;
@@ -200,11 +230,12 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0,0,0,0.5);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 .modal-content {
   background: white;
   border-radius: 8px;
