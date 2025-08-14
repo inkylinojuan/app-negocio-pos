@@ -28,7 +28,7 @@
                 </router-link>
               </li>
 
-              <li>
+              <!-- <li>
                 <router-link class="dropdown-item" to="/fijos/listado" @click="closeMenu">
                   Listado de Activos
                 </router-link>
@@ -37,7 +37,7 @@
                 <router-link class="dropdown-item" to="/fijos/crear" @click="closeMenu">
                   Crear Activo
                 </router-link>
-              </li>
+              </li> -->
               <li>
                 <router-link class="dropdown-item" to="/fijos/asignar-tag" @click="closeMenu">
                   Asignar Tag UHF

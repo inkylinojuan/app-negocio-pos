@@ -254,12 +254,12 @@ const routes = [
   { path: '/inventario/bodegas', name: 'Bodegas', component: Bodegas, meta: { requiresAuth: true, role: 'Inventario'} },
   { path: '/inventario/IngresarActivos', name: 'IngresarActivos', component: ManageActivos, meta: { requiresAuth: true, role: 'Inventario'} },
   { path: '/inventario/verActivo', name: 'VerActivo', component: RFIDReaderView, meta: { requiresAuth: false, role: 'Inventario'} },
-  {
-    path: '/fijos/crear',
-    name: 'CrearFijo',
-    component: () => import('./inventario/fijos/FijosCrearActivoView.vue'),
-    meta: { requiresAuth: true, role: 'Inventario' }
-  },
+  // {
+  //   path: '/fijos/crear',
+  //   name: 'CrearFijo',
+  //   component: () => import('./inventario/fijos/FijosCrearActivoView.vue'),
+  //   meta: { requiresAuth: true, role: 'Inventario' }
+  // },
   //-----rutas agregadas por david --------------------------------------------------
   {
   path: '/fijos/ActivosView',
@@ -268,12 +268,12 @@ const routes = [
   meta: { requiresAuth: true, role: 'Inventario' }
 },
 
-  {
-  path: '/fijos/listado',
-  name: 'ListadoFijos',
-  component: () => import('./inventario/fijos/ListadoActivosView.vue'),
-  meta: { requiresAuth: true, role: 'Inventario' }
-},
+//   {
+//   path: '/fijos/listado',
+//   name: 'ListadoFijos',
+//   component: () => import('./inventario/fijos/ListadoActivosView.vue'),
+//   meta: { requiresAuth: true, role: 'Inventario' }
+// },
 {
   path: '/fijos/Asignar-tag',
   name: 'Asignar-tag',
