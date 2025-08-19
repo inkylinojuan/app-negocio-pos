@@ -254,13 +254,16 @@ const routes = [
   { path: '/inventario/bodegas', name: 'Bodegas', component: Bodegas, meta: { requiresAuth: true, role: 'Inventario'} },
   { path: '/inventario/IngresarActivos', name: 'IngresarActivos', component: ManageActivos, meta: { requiresAuth: true, role: 'Inventario'} },
   { path: '/inventario/verActivo', name: 'VerActivo', component: RFIDReaderView, meta: { requiresAuth: false, role: 'Inventario'} },
-  // {
-  //   path: '/fijos/crear',
-  //   name: 'CrearFijo',
-  //   component: () => import('./inventario/fijos/FijosCrearActivoView.vue'),
-  //   meta: { requiresAuth: true, role: 'Inventario' }
-  // },
+  
+
   //-----rutas agregadas por david --------------------------------------------------
+ {
+  path: '/fijos/dashboard',
+  name: 'DashboardActivosFijos',
+  component: () => import('./inventario/fijos/DashBoardFijos.vue'),
+  meta: { requiresAuth: true, role: 'Inventario' }
+},
+
   {
   path: '/fijos/ActivosView',
   name: 'ActivosGenerales',

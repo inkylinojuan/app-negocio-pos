@@ -27,6 +27,11 @@
                   Activos Generales
                 </router-link>
               </li>
+              <li>
+    <router-link class="dropdown-item" to="/fijos/dashboard" @click="closeMenu">
+      Dashboard Activos Fijos
+    </router-link>
+  </li>
 
               <!-- <li>
                 <router-link class="dropdown-item" to="/fijos/listado" @click="closeMenu">
